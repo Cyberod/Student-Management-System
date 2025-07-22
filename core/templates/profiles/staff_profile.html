@@ -1,0 +1,671 @@
+{% extends 'base.html' %}
+{% block title %}Staff Profile{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Profile Card -->
+            <div class="card card-info card-outline">
+                <div class="card-body box-profile">
+                    <div class="text-center">
+                        <img class="profile-user-img img-fluid img-circle" 
+                             src="{% load static %}{% static 'avatar-staff.png' %}" 
+                             alt="Staff Profile Picture"
+                             id="profileImage">
+                    </div>
+                    <h3 class="profile-username text-center" id="profileName">{{ user.get_full_name|default:user.username }}</h3>
+                    <p class="text-muted text-center">
+                        <i class="fas fa-chalkboard-teacher text-info"></i> Staff Member
+                    </p>
+                    
+                    <ul class="list-group list-group-unbordered mb-3">
+                        <li class="list-group-item">
+                            <b>Username</b> <span class="float-right">{{ user.username }}</span>
+                        </li>
+                        <li class="list-group-item">
+                            <b>Email</b> <span class="float-right">{{ user.email }}</span>
+                        </li>
+                        {% if user.staff_profile %}
+                        <li class="list-group-item">
+                            <b>Phone</b> <span class="float-right">{{ user.staff_profile.phone_number|default:"Not set" }}</span>
+                        </li>
+                        <li class="list-group-item">
+                            <b>Gender</b> <span class="float-right">{{ user.staff_profile.gender|default:"Not set" }}</span>
+                        </li>
+                        {% endif %}
+                        <li class="list-group-item">
+                            <b>Joined</b> <span class="float-right">{{ user.date_joined|date:"M d, Y" }}</span>
+                        </li>
+                    </ul>
+                    
+                    <button class="btn btn-info btn-block" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                        <i class="fas fa-edit"></i> Edit Profile
+                    </button>
+                </div>
+            </div>
+
+            <!-- Teaching Stats Card -->
+            <div class="card card-success">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-line"></i> Teaching Statistics
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 text-center">
+                            <div class="border-right">
+                                <h4 class="text-success" id="totalSubjects">0</h4>
+                                <small>Subjects Teaching</small>
+                            </div>
+                        </div>
+                        <div class="col-6 text-center">
+                            <h4 class="text-info" id="totalStudents">0</h4>
+                            <small>Total Students</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-4 text-center">
+                            <h5 class="text-primary" id="totalClasses">0</h5>
+                            <small>Classes Taken</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <h5 class="text-warning" id="avgAttendance">0%</h5>
+                            <small>Avg Attendance</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <h5 class="text-danger" id="totalCourses">0</h5>
+                            <small>Courses</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions Card -->
+            <div class="card card-warning">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-bolt"></i> Quick Actions
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'take_attendance' %}" class="btn btn-success btn-sm">
+                            <i class="fas fa-calendar-check"></i> Take Attendance
+                        </a>
+                        <a href="{% url 'staff_subjects' %}" class="btn btn-info btn-sm">
+                            <i class="fas fa-book"></i> My Subjects
+                        </a>
+                        <a href="{% url 'staff_students' %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-users"></i> My Students
+                        </a>
+                        <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                            <i class="fas fa-key"></i> Change Password
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <!-- Profile Information -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-user"></i> Personal Information
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>First Name</label>
+                                <p class="form-control-static">{{ user.first_name|default:"Not set" }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Last Name</label>
+                                <p class="form-control-static">{{ user.last_name|default:"Not set" }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <p class="form-control-static">{{ user.email }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <p class="form-control-static">{{ user.username }}</p>
+                            </div>
+                        </div>
+                        {% if user.staff_profile %}
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <p class="form-control-static">{{ user.staff_profile.phone_number|default:"Not set" }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Gender</label>
+                                <p class="form-control-static">{{ user.staff_profile.gender|default:"Not set" }}</p>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label>Address</label>
+                                <p class="form-control-static">{{ user.staff_profile.address|default:"Not set" }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teaching Information -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chalkboard-teacher"></i> Teaching Information
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="teachingInfo">
+                        <!-- Teaching info will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- My Subjects -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-book"></i> My Subjects
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" id="subjectsTable">
+                            <thead>
+                                <tr>
+                                    <th>Subject Name</th>
+                                    <th>Course</th>
+                                    <th>Students</th>
+                                    <th>Classes Taken</th>
+                                    <th>Avg Attendance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Subjects will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activities -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-history"></i> Recent Activities
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="timeline" id="recentActivities">
+                        <!-- Activities will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editProfileModalLabel">Edit Profile</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editProfileForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="editFirstName" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="editFirstName" name="first_name" value="{{ user.first_name }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editLastName" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="editLastName" name="last_name" value="{{ user.last_name }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editEmail" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="editEmail" name="email" value="{{ user.email }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editPhone" class="form-label">Phone Number</label>
+                            <input type="text" class="form-control" id="editPhone" name="phone_number" value="{{ user.staff_profile.phone_number|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="editGender" class="form-label">Gender</label>
+                            <select class="form-control" id="editGender" name="gender">
+                                <option value="">Select Gender</option>
+                                <option value="Male" {% if user.staff_profile.gender == 'Male' %}selected{% endif %}>Male</option>
+                                <option value="Female" {% if user.staff_profile.gender == 'Female' %}selected{% endif %}>Female</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label for="editAddress" class="form-label">Address</label>
+                            <textarea class="form-control" id="editAddress" name="address" rows="3">{{ user.staff_profile.address|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changePasswordModalLabel">Change Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="changePasswordForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="currentPassword" name="current_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="newPassword" name="new_password" required minlength="8">
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading profile data...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    // CSRF setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load staff statistics
+    function loadStaffStats() {
+        $('#loadingModal').modal('show');
+        
+        $.get('/api/staff/profile/stats/')
+            .done(function(data) {
+                $('#totalSubjects').text(data.total_subjects);
+                $('#totalStudents').text(data.total_students);
+                $('#totalClasses').text(data.total_classes);
+                $('#avgAttendance').text(data.avg_attendance + '%');
+                $('#totalCourses').text(data.total_courses);
+                
+                loadTeachingInfo(data);
+                loadSubjectsTable(data.subjects);
+                $('#loadingModal').modal('hide');
+            })
+            .fail(function(xhr) {
+                $('#loadingModal').modal('hide');
+                console.error('Failed to load staff stats:', xhr.responseText);
+            });
+    }
+
+    // Load teaching information
+    function loadTeachingInfo(data) {
+        let teachingHtml = `
+            <div class="col-md-4">
+                <div class="info-box bg-info">
+                    <span class="info-box-icon"><i class="fas fa-book"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Subjects Teaching</span>
+                        <span class="info-box-number">${data.total_subjects}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-box bg-success">
+                    <span class="info-box-icon"><i class="fas fa-users"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Total Students</span>
+                        <span class="info-box-number">${data.total_students}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-box bg-warning">
+                    <span class="info-box-icon"><i class="fas fa-calendar-check"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Classes Taken</span>
+                        <span class="info-box-number">${data.total_classes}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        if (data.recent_performance) {
+            teachingHtml += `
+                <div class="col-12 mt-3">
+                    <h6>Recent Performance</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar bg-success" style="width: ${data.avg_attendance}%">
+                            Average Attendance: ${data.avg_attendance}%
+                        </div>
+                    </div>
+                    <small class="text-muted">Based on last 30 days of classes</small>
+                </div>
+            `;
+        }
+        
+        $('#teachingInfo').html(teachingHtml);
+    }
+
+    // Load subjects table
+    function loadSubjectsTable(subjects) {
+        let tableRows = '';
+        
+        if (subjects && subjects.length > 0) {
+            subjects.forEach(subject => {
+                const attendanceClass = subject.avg_attendance >= 75 ? 'success' : 
+                                       subject.avg_attendance >= 50 ? 'warning' : 'danger';
+                
+                tableRows += `
+                    <tr>
+                        <td><strong>${subject.name}</strong></td>
+                        <td>${subject.course_name}</td>
+                        <td>
+                            <span class="badge bg-info">${subject.student_count}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">${subject.classes_taken}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-${attendanceClass}">${subject.avg_attendance}%</span>
+                        </td>
+                    </tr>
+                `;
+            });
+        } else {
+            tableRows = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted">
+                        <i class="fas fa-info-circle"></i> No subjects assigned yet
+                    </td>
+                </tr>
+            `;
+        }
+        
+        $('#subjectsTable tbody').html(tableRows);
+    }
+
+    // Load recent activities
+    function loadRecentActivities() {
+        $.get('/api/staff/profile/activities/')
+            .done(function(data) {
+                let activitiesHtml = '';
+                
+                if (data.activities && data.activities.length > 0) {
+                    data.activities.forEach(activity => {
+                        const iconClass = activity.type === 'attendance' ? 'calendar-check' :
+                                         activity.type === 'result' ? 'trophy' : 'bell';
+                        const colorClass = activity.type === 'attendance' ? 'success' :
+                                          activity.type === 'result' ? 'warning' : 'info';
+                        
+                        activitiesHtml += `
+                            <div class="timeline-item">
+                                <span class="time">
+                                    <i class="fas fa-clock"></i> ${activity.time_ago}
+                                </span>
+                                <h3 class="timeline-header">
+                                    <i class="fas fa-${iconClass} text-${colorClass}"></i>
+                                    ${activity.title}
+                                </h3>
+                                <div class="timeline-body">
+                                    ${activity.description}
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    activitiesHtml = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            No recent activities found. Start taking attendance or uploading results to see activities here.
+                        </div>
+                    `;
+                }
+                
+                $('#recentActivities').html(activitiesHtml);
+            })
+            .fail(function() {
+                $('#recentActivities').html(`
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Unable to load recent activities.
+                    </div>
+                `);
+            });
+    }
+
+    // Edit profile form submission
+    $('#editProfileForm').submit(function(e) {
+        e.preventDefault();
+        
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+        
+        $.ajax({
+            url: '/api/staff/profile/update/',
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({
+                first_name: $('#editFirstName').val(),
+                last_name: $('#editLastName').val(),
+                email: $('#editEmail').val(),
+                phone_number: $('#editPhone').val(),
+                gender: $('#editGender').val(),
+                address: $('#editAddress').val()
+            }),
+            success: function(response) {
+                $('#editProfileModal').modal('hide');
+                $('#profileName').text(response.full_name);
+                alert('Profile updated successfully!');
+                location.reload();
+            },
+            error: function(xhr) {
+                console.error('Profile update failed:', xhr.responseText);
+                const errorMsg = xhr.responseJSON?.error || 'Failed to update profile';
+                alert('Error: ' + errorMsg);
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+
+    // Change password form submission
+    $('#changePasswordForm').submit(function(e) {
+        e.preventDefault();
+        
+        const newPassword = $('#newPassword').val();
+        const confirmPassword = $('#confirmPassword').val();
+        
+        if (newPassword !== confirmPassword) {
+            alert('New passwords do not match!');
+            return;
+        }
+        
+        if (newPassword.length < 8) {
+            alert('Password must be at least 8 characters long!');
+            return;
+        }
+        
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Changing...');
+        
+        $.ajax({
+            url: '/api/profile/change-password/',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({
+                current_password: $('#currentPassword').val(),
+                new_password: newPassword
+            }),
+            success: function(response) {
+                $('#changePasswordModal').modal('hide');
+                $('#changePasswordForm')[0].reset();
+                alert('Password changed successfully!');
+            },
+            error: function(xhr) {
+                console.error('Password change failed:', xhr.responseText);
+                const errorMsg = xhr.responseJSON?.error || 'Failed to change password';
+                alert('Error: ' + errorMsg);
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+
+    // Password strength indicator
+    $('#newPassword').on('input', function() {
+        const password = $(this).val();
+        let strength = 0;
+        let feedback = '';
+        
+        if (password.length >= 8) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        
+        switch(strength) {
+            case 0:
+            case 1:
+                feedback = '<small class="text-danger">Weak password</small>';
+                break;
+            case 2:
+            case 3:
+                feedback = '<small class="text-warning">Medium password</small>';
+                break;
+            case 4:
+            case 5:
+                feedback = '<small class="text-success">Strong password</small>';
+                break;
+        }
+        
+        $(this).siblings('.password-feedback').remove();
+        $(this).after(`<div class="password-feedback">${feedback}</div>`);
+    });
+
+    // Confirm password validation
+    $('#confirmPassword').on('input', function() {
+        const password = $('#newPassword').val();
+        const confirmPassword = $(this).val();
+        
+        $(this).siblings('.confirm-feedback').remove();
+        
+        if (confirmPassword && password !== confirmPassword) {
+            $(this).after('<div class="confirm-feedback"><small class="text-danger">Passwords do not match</small></div>');
+            $(this).addClass('is-invalid');
+        } else if (confirmPassword && password === confirmPassword) {
+            $(this).after('<div class="confirm-feedback"><small class="text-success">Passwords match</small></div>');
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        }
+    });
+
+    // Auto-refresh stats every 5 minutes
+    setInterval(function() {
+        loadStaffStats();
+    }, 300000);
+
+    // Keyboard shortcuts
+    $(document).keydown(function(e) {
+        // Ctrl + E to edit profile
+        if (e.ctrlKey && e.which === 69) {
+            e.preventDefault();
+            $('#editProfileModal').modal('show');
+        }
+        
+        // Ctrl + P to change password
+        if (e.ctrlKey && e.which === 80) {
+            e.preventDefault();
+            $('#changePasswordModal').modal('show');
+        }
+    });
+
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+
+    // Initialize
+    loadStaffStats();
+    loadRecentActivities();
+    
+    console.log('Staff profile initialized successfully');
+});
+</script>
+{% endblock %}
+

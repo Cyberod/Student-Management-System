@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% block title %}Upload Results{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-upload"></i> Upload Student Results
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Step 1: Select Subject -->
+                    <div id="step1" class="upload-step">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="resultSubject" class="form-label">Select Subject <span class="text-danger">*</span></label>
+                                    <select class="form-control" id="resultSubject" required>
+                                        <option value="">Choose a subject...</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button type="button" class="btn btn-primary" id="loadStudentsForResults">
+                                    <i class="fas fa-users"></i> Load Students
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Upload Results -->
+                    <div id="step2" class="upload-step" style="display: none;">
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <h5 id="resultsInfo"></h5>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button type="button" class="btn btn-secondary" id="backToStep1Results">
+                                    <i class="fas fa-arrow-left"></i> Back
+                                </button>
+                            </div>
+                        </div>
+
+                        <form id="resultsForm">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th width="5%">#</th>
+                                            <th width="30%">Student Name</th>
+                                            <th width="20%">Course</th>
+                                            <th width="20%">Test Score (0-100)</th>
+                                            <th width="20%">Exam Score (0-100)</th>
+                                            <th width="5%">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="studentsResultsTableBody">
+                                        <!-- Students will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-12 text-end">
+                                    <button type="submit" class="btn btn-success btn-lg" id="saveResults">
+                                        <i class="fas fa-save"></i> Save Results
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Processing results...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    let currentStudents = [];
+
+    // CSRF setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load subjects
+    function loadSubjects() {
+        $.get('/api/staff/results/', function(data) {
+            let options = '<option value="">Choose a subject...</option>';
+            data.subjects.forEach(subject => {
+                options += `<option value="${subject.id}">${subject.name} (${subject.course_name})</option>`;
+            });
+            $('#resultSubject').html(options);
+        }).fail(function(xhr) {
+            console.error('Failed to load subjects:', xhr.responseText);
+            alert('Failed to load subjects. Please refresh the page.');
+        });
+    }
+
+    // Load students for results
+    $('#loadStudentsForResults').click(function() {
+        const subjectId = $('#resultSubject').val();
+        if (!subjectId) {
+            alert('Please select a subject.');
+            return;
+        }
+
+        $.get('/api/staff/results/', { subject_id: subjectId }, function(data) {
+            currentStudents = data.students;
+            displayStudentsForResults(data.subject);
+            $('#step1').hide();
+            $('#step2').show();
+        }).fail(function(xhr) {
+            console.error('Failed to load students:', xhr.responseText);
+            alert('Failed to load students.');
+        });
+    });
+
+    // Display students for results
+    function displayStudentsForResults(subject) {
+        let tableRows = '';
+        currentStudents.forEach((student, index) => {
+            const existing = student.existing_result;
+            const testScore = existing ? existing.test_score : '';
+            const examScore = existing ? existing.exam_score : '';
+            const status = existing ? '<i class="fas fa-check-circle text-success"></i>' : '<i class="fas fa-clock text-warning"></i>';
+
+            tableRows += `
+                <tr data-student-id="${student.id}">
+                    <td>${index + 1}</td>
+                    <td>
+                        <strong>${student.name}</strong><br>
+                        <small class="text-muted">${student.username}</small>
+                    </td>
+                    <td>${student.course}</td>
+                    <td>
+                        <input type="number" class="form-control test-score" 
+                               min="0" max="100" step="0.1" 
+                               value="${testScore}" 
+                               data-student-id="${student.id}" required>
+                    </td>
+                    <td>
+                        <input type="number" class="form-control exam-score" 
+                               min="0" max="100" step="0.1" 
+                               value="${examScore}" 
+                               data-student-id="${student.id}" required>
+                    </td>
+                    <td class="text-center">${status}</td>
+                </tr>
+            `;
+        });
+        
+        $('#studentsResultsTableBody').html(tableRows);
+        $('#resultsInfo').text(`Upload results for: ${subject.name} (${subject.course})`);
+    }
+
+    // Back to step 1
+    $('#backToStep1Results').click(function() {
+        $('#step2').hide();
+        $('#step1').show();
+    });
+
+    // Save results
+    $('#resultsForm').submit(function(e) {
+        e.preventDefault();
+        
+        const subjectId = $('#resultSubject').val();
+        const results = [];
+
+        $('.test-score').each(function() {
+            const studentId = $(this).data('student-id');
+            const testScore = $(this).val();
+            const examScore = $(`.exam-score[data-student-id="${studentId}"]`).val();
+
+            if (testScore !== '' && examScore !== '') {
+                results.push({
+                    student_id: studentId,
+                    test_score: parseFloat(testScore),
+                    exam_score: parseFloat(examScore)
+                });
+            }
+        });
+
+        if (results.length === 0) {
+            alert('Please enter at least one result.');
+            return;
+        }
+
+        $('#loadingModal').modal('show');
+
+        $.ajax({
+            url: '/api/staff/results/',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({
+                subject_id: parseInt(subjectId),
+                results: results
+            }),
+            success: function(response) {
+                $('#loadingModal').modal('hide');
+                alert(`Results saved successfully!\nCreated: ${response.created}\nUpdated: ${response.updated}`);
+                
+                if (response.errors.length > 0) {
+                    console.log('Errors:', response.errors);
+                    alert('Some errors occurred:\n' + response.errors.join('\n'));
+                }
+                
+                // Reload students to show updated status
+                $('#loadStudentsForResults').click();
+            },
+            error: function(xhr) {
+                $('#loadingModal').modal('hide');
+                console.error('Save failed:', xhr.responseText);
+                alert('Failed to save results: ' + (xhr.responseJSON?.error || 'Unknown error'));
+            }
+        });
+    });
+
+    // Input validation
+    $(document).on('input', '.test-score, .exam-score', function() {
+        const value = parseFloat($(this).val());
+        if (value < 0 || value > 100) {
+            $(this).addClass('is-invalid');
+        } else {
+            $(this).removeClass('is-invalid');
+        }
+    });
+
+    // Initialize
+    loadSubjects();
+});
+</script>
+{% endblock %}

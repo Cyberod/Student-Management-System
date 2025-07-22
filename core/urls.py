@@ -20,6 +20,10 @@ from .views import (
     export_attendance_csv, export_results_csv, export_attendance_pdf,
     login_view, logout_view,take_attendance_view, attendance_list_view, 
     attendance_reports_view, student_progress_view, student_results_view,
+    upload_results_view, export_student_results_pdf, ResultsUploadAPIView,
+    student_subjects_view, StudentSubjectsAPIView,
+    student_attendance_view, StudentAttendanceAPIView, student_lecturers_view,
+    StudentLecturersAPIView, SendMessageToLecturerAPIView, profile_view,
 )
 
 urlpatterns = [
@@ -47,6 +51,15 @@ urlpatterns = [
     # Student Progress and Results
     path('student/progress/', student_progress_view, name='student_progress'),
     path('student/results/', student_results_view, name='student_results'),
+    path('student/attendance/', student_attendance_view, name='student_attendance'),
+    path('api/student/attendance/', StudentAttendanceAPIView.as_view(), name='student_attendance_api'),
+
+    path('student/subjects/', student_subjects_view, name='student_subjects'),
+    path('api/student/subjects/', StudentSubjectsAPIView.as_view(), name='student_subjects_api'),
+
+    path('student/lecturers/', student_lecturers_view, name='student_lecturers'),
+    path('api/student/lecturers/', StudentLecturersAPIView.as_view(), name='student_lecturers_api'),
+    path('api/student/send-message/', SendMessageToLecturerAPIView.as_view(), name='student_send_message'),
 
 
 
@@ -87,6 +100,11 @@ urlpatterns = [
     path('api-reports/attendance/csv/', export_attendance_csv, name='attendance-export-csv'),
     path('api-reports/results/csv/', export_results_csv, name='results-export-csv'),
     path('api-reports/attendance/pdf/', export_attendance_pdf, name='attendance-export-pdf'),
+    # Add this line to your existing urlpatterns
+path('api-reports/student-results/pdf/', export_student_results_pdf, name='student-results-export-pdf'),
+
+    path('staff/upload-results/', upload_results_view, name='upload_results'),
+    path('api/staff/results/', ResultsUploadAPIView.as_view(), name='staff_results_api'),
 
     path('dashboard/', views.dashboard, name='dashboard'),
 
@@ -105,6 +123,23 @@ urlpatterns = [
     path('attendance/', attendance_list_view, name='attendance_list'),
     path('attendance/take/', take_attendance_view, name='take_attendance'),
     path('attendance/reports/', attendance_reports_view, name='attendance_reports'), 
+
+
+    path('api/staff/profile/stats/', views.StaffProfileStatsAPIView.as_view(), name='staff-profile-stats'),
+    path('api/staff/profile/activities/', views.StaffProfileActivitiesAPIView.as_view(), name='staff-profile-activities'),
+    path('api/staff/profile/update/', views.StaffProfileUpdateAPIView.as_view(), name='staff-profile-update'),
+
+    path('api/student/profile/stats/', views.StudentProfileStatsAPIView.as_view(), name='student-profile-stats'),
+    path('api/student/profile/activities/', views.StudentProfileActivitiesAPIView.as_view(), name='student-profile-activities'),
+    path('api/student/profile/update/', views.StudentProfileUpdateAPIView.as_view(), name='student-profile-update'),
+
+    path('api/admin/profile/stats/', views.AdminProfileStatsAPIView.as_view(), name='admin-profile-stats'),
+    path('api/admin/profile/activities/', views.AdminProfileActivitiesAPIView.as_view(), name='admin-profile-activities'),
+
+    path('api/profile/change-password/', views.ChangePasswordAPIView.as_view(), name='change-password'),
+
+    # Profile page routes
+    path('profile/', views.profile_view, name='profile'),
     
      
 

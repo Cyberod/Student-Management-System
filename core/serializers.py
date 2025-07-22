@@ -172,6 +172,26 @@ class StaffUserProfileUpdateSerializer(serializers.Serializer):
         }
 
 
+class StudentMessageSerializer(serializers.Serializer):
+    lecturer_id = serializers.IntegerField()
+    message = serializers.CharField(min_length=10, max_length=1000)
+    subject_id = serializers.IntegerField(required=False, allow_null=True)
+    
+    def validate_lecturer_id(self, value):
+        try:
+            lecturer = User.objects.get(id=value, user_type=2)
+            return value
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Lecturer not found")
+    
+    def validate_message(self, value):
+        if len(value.strip()) < 10:
+            raise serializers.ValidationError("Message must be at least 10 characters long")
+        return value.strip()
+
+
+
+
 class StudentProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     course_name = serializers.SerializerMethodField()

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Student Results Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #2c3e50;
+        }
+        .header h2 {
+            margin: 5px 0;
+            color: #7f8c8d;
+            font-weight: normal;
+        }
+        .student-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .student-info h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #34495e;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .grade-excellent {
+            background-color: #d4edda !important;
+            color: #155724;
+            font-weight: bold;
+        }
+        .grade-good {
+            background-color: #d1ecf1 !important;
+            color: #0c5460;
+        }
+        .grade-average {
+            background-color: #fff3cd !important;
+            color: #856404;
+        }
+        .grade-poor {
+            background-color: #f8d7da !important;
+            color: #721c24;
+        }
+        .summary {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .summary h4 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #7f8c8d;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Student Results Report</h1>
+        <h2>Academic Performance Summary</h2>
+        <p>Generated on: {{ current_date }}</p>
+    </div>
+
+    {% if student_profile %}
+    <div class="student-info">
+        <h3>Student Information</h3>
+        <div class="info-row">
+            <span class="info-label">Name:</span>
+            <span>{{ student_profile.user.get_full_name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Student ID:</span>
+            <span>{{ student_profile.user.username }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Course:</span>
+            <span>{{ student_profile.course.name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Session:</span>
+            <span>{{ student_profile.session_year.start_year }} - {{ student_profile.session_year.end_year }}</span>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if results %}
+    <table>
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Test Score</th>
+                <th>Exam Score</th>
+                <th>Total Score</th>
+                <th>Grade</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in results %}
+            {% with total_score=result.test_score|add:result.exam_score %}
+            <tr class="{% if total_score >= 160 %}grade-excellent{% elif total_score >= 120 %}grade-good{% elif total_score >= 100 %}grade-average{% else %}grade-poor{% endif %}">
+                <td>{{ result.subject.name }}</td>
+                <td>{{ result.test_score }}/100</td>
+                <td>{{ result.exam_score }}/100</td>
+                <td>{{ total_score }}/200</td>
+                <td>
+                    {% if total_score >= 160 %}
+                        A (Excellent)
+                    {% elif total_score >= 120 %}
+                        B (Good)
+                    {% elif total_score >= 100 %}
+                        C (Average)
+                    {% elif total_score >= 80 %}
+                        D (Below Average)
+                    {% else %}
+                        F (Fail)
+                    {% endif %}
+                </td>
+                <td>
+                    {% if total_score >= 100 %}
+                        <strong style="color: #28a745;">PASS</strong>
+                    {% else %}
+                        <strong style="color: #dc3545;">FAIL</strong>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="summary">
+        <h4>Performance Summary</h4>
+        <div class="info-row">
+            <span class="info-label">Total Subjects:</span>
+            <span>{{ results|length }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Subjects Passed:</span>
+            <span>{{ passed_count }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Subjects Failed:</span>
+            <span>{{ failed_count }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Overall Average:</span>
+            <span>{{ overall_average|floatformat:1 }}%</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Overall Grade:</span>
+            <span>
+                {% if overall_average >= 80 %}
+                    A (Excellent)
+                {% elif overall_average >= 60 %}
+                    B (Good)
+                {% elif overall_average >= 50 %}
+                    C (Average)
+                {% elif overall_average >= 40 %}
+                    D (Below Average)
+                {% else %}
+                    F (Fail)
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    {% else %}
+    <div class="no-results">
+        <h3>No Results Available</h3>
+        <p>No examination results have been uploaded for this student yet.</p>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <p>This is an official document generated by the Student Management System</p>
+        <p>© {{ current_year }} Student Management System. All rights reserved.</p>
+    </div>
+</body>
+</html>

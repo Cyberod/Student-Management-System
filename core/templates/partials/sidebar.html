@@ -206,7 +206,7 @@
                         </a>
                         <ul class="nav nav-treeview">
                             <li class="nav-item">
-                                <a href="#" class="nav-link">
+                                <a href="{%url 'upload_results'%}" class="nav-link">
                                     <i class="far fa-circle nav-icon"></i>
                                     <p>Upload Results</p>
                                 </a>
@@ -241,17 +241,17 @@
                         </a>
                     </li>
 
-                    <!-- My Courses -->
+                    <!-- My Subjects -->
                     <li class="nav-item">
-                        <a href="#" class="nav-link">
-                            <i class="nav-icon fas fa-graduation-cap"></i>
-                            <p>My Courses</p>
+                        <a href="{% url 'student_subjects' %}" class="nav-link {% if request.resolver_match.url_name == 'student_subjects' %}active{% endif %}">
+                            <i class="nav-icon fas fa-book"></i>
+                            <p>My Subjects</p>
                         </a>
                     </li>
 
                     <!-- My Lecturers -->
                     <li class="nav-item">
-                        <a href="#" class="nav-link">
+                        <a href="{% url 'student_lecturers' %}" class="nav-link {% if request.resolver_match.url_name == 'student_lecturers' %}active{% endif %}">
                             <i class="nav-icon fas fa-chalkboard-teacher"></i>
                             <p>My Lecturers</p>
                         </a>
@@ -260,7 +260,7 @@
 
                     <!-- My Attendance -->
                     <li class="nav-item">
-                        <a href="#" class="nav-link">
+                        <a href="{% url 'student_attendance' %}" class="nav-link {% if request.resolver_match.url_name == 'student_attendance' %}active{% endif %}">
                             <i class="nav-icon fas fa-calendar-alt"></i>
                             <p>My Attendance</p>
                         </a>
@@ -273,7 +273,7 @@
                 
                 <!-- Profile -->
                 <li class="nav-item">
-                    <a href="#" class="nav-link">
+                    <a href="{% url 'profile' %}" class="nav-link">
                         <i class="nav-icon fas fa-user"></i>
                         <p>My Profile</p>
                     </a>

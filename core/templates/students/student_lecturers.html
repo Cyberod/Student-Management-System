@@ -1,0 +1,631 @@
+{% extends 'base.html' %}
+{% block title %}My Lecturers{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-chalkboard-teacher"></i> My Lecturers
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Course Information -->
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="alert alert-info">
+                                <h5 class="alert-heading">
+                                    <i class="fas fa-graduation-cap"></i> Course Information
+                                </h5>
+                                <p class="mb-1"><strong>Course:</strong> {{ student_profile.course.name }}</p>
+                                <p class="mb-1"><strong>Student:</strong> {{ student_profile.user.get_full_name }}</p>
+                                <p class="mb-0"><strong>Session:</strong> {{ student_profile.session_year.start_year }} - {{ student_profile.session_year.end_year }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistics Cards -->
+                    <div class="row mb-4" id="statsCards">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="small-box bg-primary">
+                                <div class="inner">
+                                    <h3 id="totalLecturers">{{ total_lecturers }}</h3>
+                                    <p>Total Lecturers</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-chalkboard-teacher"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="small-box bg-info">
+                                <div class="inner">
+                                    <h3 id="totalSubjects">{{ total_subjects }}</h3>
+                                    <p>Total Subjects</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-book"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="small-box bg-warning">
+                                <div class="inner">
+                                    <h3 id="avgAttendance">0%</h3>
+                                    <p>Avg Attendance</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="small-box bg-success">
+                                <div class="inner">
+                                    <h3 id="avgGrade">0%</h3>
+                                    <p>Avg Performance</p>
+                                </div>
+                                <div class="icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search and Filter -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="searchLecturers" placeholder="Search lecturers by name or subject...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-primary" id="refreshData">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lecturers Grid -->
+                    <div class="row" id="lecturersGrid">
+                        <!-- Lecturers will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lecturer Details Modal -->
+<div class="modal fade" id="lecturerDetailsModal" tabindex="-1" aria-labelledby="lecturerDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lecturerDetailsModalLabel">Lecturer Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="lecturerDetailsContent">
+                <!-- Details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="sendMessageBtn">
+                    <i class="fas fa-envelope"></i> Send Message
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Message Modal -->
+<div class="modal fade" id="sendMessageModal" tabindex="-1" aria-labelledby="sendMessageModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sendMessageModalLabel">Send Message to Lecturer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="sendMessageForm">
+                <div class="modal-body">
+                    <input type="hidden" id="messageLecturerId">
+                    <div class="mb-3">
+                        <label for="messageSubject" class="form-label">Subject (Optional)</label>
+                        <select class="form-control" id="messageSubject">
+                            <option value="">General Message</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="messageContent" class="form-label">Message <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="messageContent" rows="5" 
+                                  placeholder="Type your message here..." required minlength="10"></textarea>
+                        <div class="form-text">Minimum 10 characters required</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            Your message will be sent as feedback to the lecturer and they will receive a notification.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Send Message
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading lecturers data...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    let lecturersData = {};
+    let currentLecturer = null;
+
+    // CSRF setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load lecturers data
+    function loadLecturers() {
+        $('#loadingModal').modal('show');
+        
+        $.get('/api/student/lecturers/')
+            .done(function(data) {
+                lecturersData = data;
+                displayLecturers(data.lecturers);
+                updateStatistics(data);
+                $('#loadingModal').modal('hide');
+            })
+            .fail(function(xhr) {
+                $('#loadingModal').modal('hide');
+                console.error('Failed to load lecturers:', xhr.responseText);
+                alert('Failed to load lecturers data.');
+            });
+    }
+
+    // Display lecturers in grid
+    function displayLecturers(lecturers) {
+        let gridHtml = '';
+        
+        lecturers.forEach(lecturer => {
+            const attendanceClass = lecturer.statistics.attendance_percentage >= 75 ? 'success' : 
+                                   lecturer.statistics.attendance_percentage >= 50 ? 'warning' : 'danger';
+            
+            const gradeClass = lecturer.statistics.average_grade >= 70 ? 'success' : 
+                              lecturer.statistics.average_grade >= 50 ? 'warning' : 'danger';
+            
+            gridHtml += `
+                <div class="col-lg-4 col-md-6 mb-4 lecturer-card" data-lecturer-name="${lecturer.name.toLowerCase()}" data-subjects="${lecturer.subjects.map(s => s.name.toLowerCase()).join(' ')}">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-light">
+                            <div class="d-flex align-items-center">
+                                <div class="lecturer-avatar me-3">
+                                    <i class="fas fa-user-circle fa-3x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1">${lecturer.name}</h5>
+                                    <small class="text-muted">
+                                        <i class="fas fa-envelope"></i> ${lecturer.email}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h6 class="text-info">${lecturer.statistics.subjects_with_student}</h6>
+                                        <small class="text-muted">Subjects</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <h6 class="text-primary">${lecturer.statistics.total_classes}</h6>
+                                        <small class="text-muted">Total Classes</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small>Attendance</small>
+                                    <small class="text-${attendanceClass}">${lecturer.statistics.attendance_percentage}%</small>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-${attendanceClass}" style="width: ${lecturer.statistics.attendance_percentage}%"></div>
+                                </div>
+                            </div>
+                            
+                            ${lecturer.statistics.average_grade > 0 ? `
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <small>Avg Grade</small>
+                                        <small class="text-${gradeClass}">${lecturer.statistics.average_grade}%</small>
+                                    </div>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-${gradeClass}" style="width: ${lecturer.statistics.average_grade}%"></div>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-2">Subjects:</h6>
+                                <div class="d-flex flex-wrap gap-1">
+                                    ${lecturer.subjects.map(subject => 
+                                        `<span class="badge bg-secondary">${subject.name}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                            
+                            ${lecturer.profile && lecturer.profile.phone_number ? `
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-phone"></i> ${lecturer.profile.phone_number}
+                                    </small>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="card-footer bg-light">
+                            <div class="d-flex justify-content-between">
+                                <button class="btn btn-sm btn-outline-primary view-details" data-lecturer='${JSON.stringify(lecturer)}'>
+                                    <i class="fas fa-eye"></i> Details
+                                </button>
+                                <button class="btn btn-sm btn-primary send-message" data-lecturer='${JSON.stringify(lecturer)}'>
+                                    <i class="fas fa-envelope"></i> Message
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (gridHtml === '') {
+            gridHtml = `
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                        <h5>No Lecturers Found</h5>
+                        <p class="mb-0">No lecturers are assigned to your course subjects yet.</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        $('#lecturersGrid').html(gridHtml);
+    }
+
+    // Update statistics
+    function updateStatistics(data) {
+        $('#totalLecturers').text(data.summary.total_lecturers);
+        $('#totalSubjects').text(data.summary.total_subjects);
+        $('#avgAttendance').text(data.summary.average_attendance + '%');
+        
+        // Calculate average grade
+        let totalGrade = 0;
+        let gradeCount = 0;
+        data.lecturers.forEach(lecturer => {
+            if (lecturer.statistics.average_grade > 0) {
+                totalGrade += lecturer.statistics.average_grade;
+                gradeCount++;
+            }
+        });
+        
+        const avgGrade = gradeCount > 0 ? (totalGrade / gradeCount).toFixed(1) : 0;
+        $('#avgGrade').text(avgGrade + '%');
+    }
+
+    // Search functionality
+    $('#searchLecturers').on('input', function() {
+        const searchTerm = $(this).val().toLowerCase();
+        
+        $('.lecturer-card').each(function() {
+            const lecturerName = $(this).data('lecturer-name');
+            const subjects = $(this).data('subjects');
+            
+            if (lecturerName.includes(searchTerm) || subjects.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+
+    // View lecturer details
+    $(document).on('click', '.view-details', function() {
+        const lecturer = $(this).data('lecturer');
+        currentLecturer = lecturer;
+        
+        const attendanceClass = lecturer.statistics.attendance_percentage >= 75 ? 'success' : 
+                               lecturer.statistics.attendance_percentage >= 50 ? 'warning' : 'danger';
+        
+        const gradeClass = lecturer.statistics.average_grade >= 70 ? 'success' : 
+                          lecturer.statistics.average_grade >= 50 ? 'warning' : 'danger';
+        
+        let detailsHtml = `
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <i class="fas fa-user-circle fa-5x text-primary mb-3"></i>
+                    <h4>${lecturer.name}</h4>
+                    <p class="text-muted">${lecturer.email}</p>
+                    ${lecturer.profile && lecturer.profile.phone_number ? 
+                        `<p><i class="fas fa-phone"></i> ${lecturer.profile.phone_number}</p>` : ''
+                    }
+                    ${lecturer.profile && lecturer.profile.address ? 
+                        `<p><i class="fas fa-map-marker-alt"></i> ${lecturer.profile.address}</p>` : ''
+                    }
+                </div>
+                <div class="col-md-8">
+                    <h5><i class="fas fa-chart-bar text-info"></i> Statistics</h5>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="text-center p-2 border rounded">
+                                <h4 class="text-primary">${lecturer.statistics.subjects_with_student}</h4>
+                                <small>Subjects with You</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-2 border rounded">
+                                <h4 class="text-info">${lecturer.statistics.total_subjects_taught}</h4>
+                                <small>Total Subjects Taught</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>Your Attendance in Their Classes:</span>
+                            <span class="text-${attendanceClass}">${lecturer.statistics.attendance_percentage}%</span>
+                        </div>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-${attendanceClass}" style="width: ${lecturer.statistics.attendance_percentage}%"></div>
+                        </div>
+                        <small class="text-muted">
+                            Attended: ${lecturer.statistics.attended_classes} / ${lecturer.statistics.total_classes} classes
+                        </small>
+                    </div>
+                    
+                    ${lecturer.statistics.average_grade > 0 ? `
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Your Average Grade:</span>
+                                <span class="text-${gradeClass}">${lecturer.statistics.average_grade}%</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar bg-${gradeClass}" style="width: ${lecturer.statistics.average_grade}%"></div>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No grades available yet for subjects taught by this lecturer.
+                        </div>
+                    `}
+                </div>
+            </div>
+            
+            <hr>
+            
+            <div class="row">
+                <div class="col-12">
+                    <h5><i class="fas fa-book text-success"></i> Subjects Taught to You</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>Course</th>
+                                    <th>Date Added</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${lecturer.subjects.map(subject => `
+                                    <tr>
+                                        <td><strong>${subject.name}</strong></td>
+                                        <td>${subject.course_name}</td>
+                                        <td>${subject.created_at}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        $('#lecturerDetailsContent').html(detailsHtml);
+        $('#lecturerDetailsModalLabel').text(`${lecturer.name} - Details`);
+        $('#lecturerDetailsModal').modal('show');
+    });
+
+    // Send message button from details modal
+    $('#sendMessageBtn').click(function() {
+        if (currentLecturer) {
+            $('#lecturerDetailsModal').modal('hide');
+            openSendMessageModal(currentLecturer);
+        }
+    });
+
+    // Send message button from card
+    $(document).on('click', '.send-message', function() {
+        const lecturer = $(this).data('lecturer');
+        openSendMessageModal(lecturer);
+    });
+
+    // Open send message modal
+    function openSendMessageModal(lecturer) {
+        currentLecturer = lecturer;
+        
+        // Populate subject dropdown
+        let subjectOptions = '<option value="">General Message</option>';
+        lecturer.subjects.forEach(subject => {
+            subjectOptions += `<option value="${subject.id}">${subject.name}</option>`;
+        });
+        $('#messageSubject').html(subjectOptions);
+        
+        // Set lecturer ID
+        $('#messageLecturerId').val(lecturer.id);
+        
+        // Update modal title
+        $('#sendMessageModalLabel').text(`Send Message to ${lecturer.name}`);
+        
+        // Clear previous message
+        $('#messageContent').val('');
+        
+        // Show modal
+        $('#sendMessageModal').modal('show');
+    }
+
+    // Send message form submission
+    $('#sendMessageForm').submit(function(e) {
+        e.preventDefault();
+        
+        const lecturerId = $('#messageLecturerId').val();
+        const message = $('#messageContent').val().trim();
+        const subjectId = $('#messageSubject').val();
+        
+        if (!message || message.length < 10) {
+            alert('Please enter a message with at least 10 characters.');
+            return;
+        }
+        
+        // Disable submit button
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Sending...');
+        
+        $.ajax({
+            url: '/api/student/send-message/',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({
+                lecturer_id: lecturerId,
+                message: message,
+                subject_id: subjectId || null
+            }),
+            success: function(response) {
+                $('#sendMessageModal').modal('hide');
+                $('#sendMessageForm')[0].reset();
+                alert('Message sent successfully to the lecturer!');
+            },
+            error: function(xhr) {
+                console.error('Failed to send message:', xhr.responseText);
+                const errorMsg = xhr.responseJSON?.error || 'Failed to send message';
+                alert('Error: ' + errorMsg);
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+
+    // Refresh data
+    $('#refreshData').click(function() {
+        loadLecturers();
+    });
+
+    // Character counter for message
+    $('#messageContent').on('input', function() {
+        const length = $(this).val().length;
+        const minLength = 10;
+        const remaining = Math.max(0, minLength - length);
+        
+        let counterText = '';
+        if (remaining > 0) {
+            counterText = `${remaining} more characters needed`;
+            $(this).removeClass('is-valid').addClass('is-invalid');
+        } else {
+            counterText = `${length} characters`;
+            $(this).removeClass('is-invalid').addClass('is-valid');
+        }
+        
+        $(this).siblings('.form-text').text(counterText);
+    });
+
+    // Keyboard shortcuts
+    $(document).keydown(function(e) {
+        // Ctrl + F to focus on search
+        if (e.ctrlKey && e.which === 70) {
+            e.preventDefault();
+            $('#searchLecturers').focus();
+        }
+        
+        // Ctrl + R to refresh
+        if (e.ctrlKey && e.which === 82) {
+            e.preventDefault();
+            loadLecturers();
+        }
+        
+        // Escape to close modals
+        if (e.which === 27) {
+            $('.modal').modal('hide');
+        }
+    });
+
+    // Auto-refresh every 5 minutes
+    setInterval(function() {
+        loadLecturers();
+    }, 300000);
+
+    // Responsive grid adjustments
+    $(window).resize(function() {
+        // Adjust card heights on window resize
+        setTimeout(function() {
+            $('.lecturer-card .card').each(function() {
+                $(this).css('height', 'auto');
+            });
+        }, 100);
+    });
+
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+
+    // Initialize
+    loadLecturers();
+    
+    console.log('Student Lecturers view initialized successfully');
+});
+</script>
+{% endblock %}
+
