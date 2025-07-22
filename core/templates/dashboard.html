@@ -1,0 +1,1046 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-gradient-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="mb-1">Welcome back, {{ user.get_full_name|default:user.username }}!</h2>
+                            <p class="mb-0">
+                                {% if user.user_type == 1 %}
+                                    <i class="fas fa-user-shield"></i> Administrator Dashboard
+                                {% elif user.user_type == 2 %}
+                                    <i class="fas fa-chalkboard-teacher"></i> Staff Dashboard
+                                {% elif user.user_type == 3 %}
+                                    <i class="fas fa-user-graduate"></i> Student Dashboard
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="text-end">
+                            <div class="h5 mb-0">{{ today|date:"l, F d, Y" }}</div>
+                            <small id="currentTime"></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    {% if user.user_type == 1 %}
+    <div class="row g-4 mb-4">
+        <!-- Statistics Cards -->
+        <div class="col-lg-3 col-md-6 col-12">
+            <div class="small-box bg-info shadow-sm">
+                <div class="inner">
+                    <h3>{{ total_students }}</h3>
+                    <p>Total Students</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <a href="{% url 'students_list' %}" class="small-box-footer">
+                    More info <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-12">
+            <div class="small-box bg-success shadow-sm">
+                <div class="inner">
+                    <h3>{{ total_staff }}</h3>
+                    <p>Total Staff</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+                <a href="{% url 'staff_list' %}" class="small-box-footer">
+                    More info <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-12">
+            <div class="small-box bg-warning shadow-sm">
+                <div class="inner">
+                    <h3>{{ total_courses }}</h3>
+                    <p>Total Courses</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <a href="{% url 'courses_list' %}" class="small-box-footer">
+                    More info <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 col-12">
+            <div class="small-box bg-danger shadow-sm">
+                <div class="inner">
+                    <h3>{{ total_subjects }}</h3>
+                    <p>Total Subjects</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <a href="{% url 'subjects_list' %}" class="small-box-footer">
+                    More info <i class="fas fa-arrow-circle-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Charts and Tables Row -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">System Overview</h3>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-light btn-sm" id="refreshCharts">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <canvas id="attendanceOverviewChart" height="200"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <canvas id="enrollmentChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h3 class="card-title mb-0">Quick Actions</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'students_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-user-plus"></i> Add New Student
+                        </a>
+                        <a href="{% url 'staff_list' %}" class="btn btn-outline-success">
+                            <i class="fas fa-user-tie"></i> Add New Staff
+                        </a>
+                        <a href="{% url 'courses_list' %}" class="btn btn-outline-warning">
+                            <i class="fas fa-plus"></i> Create Course
+                        </a>
+                        <a href="{% url 'attendance_reports' %}" class="btn btn-outline-info">
+                            <i class="fas fa-chart-bar"></i> View Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Activities -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-secondary text-white">
+                    <h3 class="card-title mb-0">Recent Activities</h3>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="recentActivities">
+                        <div class="list-group-item d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading activities...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Dashboard -->
+    {% elif user.user_type == 2 %}
+    <div class="row g-4 mb-4">
+        <!-- Staff Statistics -->
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-primary shadow-sm">
+                <div class="inner">
+                    <h3 id="assignedSubjects">{{ assigned_subjects_count|default:0 }}</h3>
+                    <p>Assigned Subjects</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-success shadow-sm">
+                <div class="inner">
+                    <h3 id="totalStudentsInCourses">{{ total_students_in_courses|default:0 }}</h3>
+                    <p>Students in My Courses</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-warning shadow-sm">
+                <div class="inner">
+                    <h3 id="todayClasses">0</h3>
+                    <p>Today's Classes</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-calendar-day"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-info shadow-sm">
+                <div class="inner">
+                    <h3 id="pendingTasks">0</h3>
+                    <p>Pending Tasks</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-tasks"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h3 class="card-title mb-0">My Subjects & Classes</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="mySubjectsTable">
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>Course</th>
+                                    <th>Students</th>
+                                    <th>Last Attendance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="5" class="text-center">
+                                        <div class="spinner-border" role="status"></div>
+                                        Loading subjects...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">Quick Actions</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'take_attendance' %}" class="btn btn-success">
+                            <i class="fas fa-calendar-check"></i> Take Attendance
+                        </a>
+                        <a href="{% url 'attendance_list' %}" class="btn btn-info">
+                            <i class="fas fa-list"></i> View Attendance
+                        </a>
+                        <button class="btn btn-warning" id="addResultBtn">
+                            <i class="fas fa-plus"></i> Add Results
+                        </button>
+                        <button class="btn btn-secondary" id="sendNotificationBtn">
+                            <i class="fas fa-bell"></i> Send Notification
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Summary -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-info text-white">
+                    <h3 class="card-title mb-0">Attendance Summary</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="staffAttendanceChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Dashboard -->
+    {% elif user.user_type == 3 %}
+    <div class="row g-4 mb-4">
+        <!-- Student Statistics -->
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-info shadow-sm">
+                <div class="inner">
+                    <h3 id="myAttendancePercentage">{{ attendance_percentage|default:0 }}%</h3>
+                    <p>My Attendance</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-percentage"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-success shadow-sm">
+                <div class="inner">
+                    <h3 id="totalSubjects">{{ total_subjects|default:0 }}</h3>
+                    <p>Total Subjects</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-book"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-warning shadow-sm">
+                <div class="inner">
+                    <h3 id="averageScore">{{ average_score|default:0 }}%</h3>
+                    <p>Average Score</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-danger shadow-sm">
+                <div class="inner">
+                    <h3 id="pendingAssignments">0</h3>
+                    <p>Pending Assignments</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title mb-0">My Academic Progress</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Attendance Overview</h5>
+                            <canvas id="studentAttendanceChart" height="200"></canvas>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Subject-wise Performance</h5>
+                            <canvas id="studentPerformanceChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <!-- Course Information -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h3 class="card-title mb-0">My Course Info</h3>
+                </div>
+                <div class="card-body">
+                    <div class="info-item mb-3">
+                        <strong>Course:</strong>
+                        <span id="studentCourse">{{ student_course|default:"Not Assigned" }}</span>
+                    </div>
+                    <div class="info-item mb-3">
+                        <strong>Session:</strong>
+                        <span id="studentSession">{{ student_session|default:"Not Assigned" }}</span>
+                    </div>
+                    <div class="info-item mb-3">
+                        <strong>Student ID:</strong>
+                        <span>{{ user.username }}</span>
+                    </div>
+                    <div class="info-item mb-3">
+                        <strong>Email:</strong>
+                        <span>{{ user.email }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-info text-white">
+                    <h3 class="card-title mb-0">Quick Actions</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" id="viewAttendanceBtn">
+                            <i class="fas fa-calendar-check"></i> View My Attendance
+                        </button>
+                        <button class="btn btn-success" id="viewResultsBtn">
+                            <i class="fas fa-chart-bar"></i> View My Results
+                        </button>
+                        <button class="btn btn-warning" id="applyLeaveBtn">
+                            <i class="fas fa-calendar-times"></i> Apply for Leave
+                        </button>
+                        <button class="btn btn-secondary" id="sendFeedbackBtn">
+                            <i class="fas fa-comment"></i> Send Feedback
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Results -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-warning text-white">
+                    <h3 class="card-title mb-0">Recent Results</h3>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="recentResults">
+                        <div class="list-group-item d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading results...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Notifications Section (Common for all users) -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-bell"></i> Recent Notifications
+                    </h3>
+                    <button class="btn btn-sm btn-light" id="markAllReadBtn">
+                        <i class="fas fa-check-double"></i> Mark All Read
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="notificationsList">
+                        <div class="list-group-item d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                            Loading notifications...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Add Result Modal (Staff Only) -->
+{% if user.user_type == 2 %}
+<div class="modal fade" id="addResultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Student Result</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addResultForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Subject</label>
+                            <select class="form-control" id="resultSubject" required>
+                                <option value="">Select Subject</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Student</label>
+                            <select class="form-control" id="resultStudent" required>
+                                <option value="">Select Student</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Test Score</label>
+                            <input type="number" class="form-control" id="testScore" min="0" max="100" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Exam Score</label>
+                            <input type="number" class="form-control" id="examScore" min="0" max="100" required>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveResultBtn">Save Result</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Notification Modal (Staff Only) -->
+<div class="modal fade" id="sendNotificationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Send Notification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="sendNotificationForm">
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <textarea class="form-control" id="notificationMessage" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Send To</label>
+                        <select class="form-control" id="notificationRecipient" required>
+                            <option value="student">My Students</option>
+                            <option value="all">All Students</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="sendNotificationSubmitBtn">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Apply Leave Modal (Student Only) -->
+{% if user.user_type == 3 %}
+<div class="modal fade" id="applyLeaveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Apply for Leave</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="applyLeaveForm">
+                    <div class="mb-3">
+                        <label class="form-label">Leave Date</label>
+                        <input type="date" class="form-control" id="leaveDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" id="leaveReason" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitLeaveBtn">Submit Application</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Feedback Modal (Student Only) -->
+<div class="modal fade" id="sendFeedbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Send Feedback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="sendFeedbackForm">
+                    <div class="mb-3">
+                        <label class="form-label">Feedback Message</label>
+                        <textarea class="form-control" id="feedbackMessage" rows="4" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitFeedbackBtn">Send Feedback</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    const userType = "{{ user.user_type }}";
+});
+    let dashboardData = {};
+
+    // Update current time
+    function updateTime() {
+        const now = new Date();
+        $('#currentTime').text(now.toLocaleTimeString());
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    // CSRF setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load dashboard data
+    function loadDashboardData() {
+        $.get('/api-dashboard/')
+            .done(function(data) {
+                dashboardData = data;
+                updateDashboardContent(data);
+            })
+            .fail(function(xhr) {
+                console.error('Failed to load dashboard data:', xhr.responseText);
+            });
+    }
+
+    // Update dashboard content based on user type
+    function updateDashboardContent(data) {
+        if (userType === 1) {
+            // Admin dashboard updates
+            updateAdminDashboard(data);
+        } else if (userType === 2) {
+            // Staff dashboard updates
+            updateStaffDashboard(data);
+        } else if (userType === 3) {
+            // Student dashboard updates
+            updateStudentDashboard(data);
+        }
+        
+        // Load notifications for all users
+        loadNotifications();
+    }
+
+    // Admin dashboard updates
+    function updateAdminDashboard(data) {
+        // Update charts
+        if (data.stats) {
+            createAttendanceOverviewChart(data.attendance_summary);
+            createEnrollmentChart(data.stats);
+        }
+        
+        // Load recent activities
+        loadRecentActivities();
+    }
+
+    // Staff dashboard updates
+    function updateStaffDashboard(data) {
+        if (data.assigned_subjects) {
+            $('#assignedSubjects').text(data.assigned_subjects.length);
+            updateMySubjectsTable(data.assigned_subjects);
+        }
+        
+        $('#totalStudentsInCourses').text(data.total_students_in_courses || 0);
+        
+        // Create staff attendance chart
+        createStaffAttendanceChart(data);
+    }
+
+    // Student dashboard updates
+    function updateStudentDashboard(data) {
+        $('#myAttendancePercentage').text((data.attendance_percentage || 0) + '%');
+        $('#totalSubjects').text(data.subjects ? data.subjects.length : 0);
+        
+        if (data.course) {
+            $('#studentCourse').text(data.course);
+        }
+        if (data.session) {
+            $('#studentSession').text(data.session);
+        }
+        
+        // Create student charts
+        createStudentAttendanceChart(data);
+        createStudentPerformanceChart(data);
+        
+        // Load recent results
+        loadRecentResults();
+    }
+
+    // Create attendance overview chart (Admin)
+    function createAttendanceOverviewChart(attendanceData) {
+        const ctx = document.getElementById('attendanceOverviewChart');
+        if (!ctx) return;
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Present', 'Absent'],
+                datasets: [{
+                    data: [
+                        attendanceData ? attendanceData.present : 0,
+                        attendanceData ? attendanceData.total_attendance - attendanceData.present : 0
+                    ],
+                    backgroundColor: ['#28a745', '#dc3545'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Overall Attendance'
+                    }
+                }
+            }
+        });
+    }
+
+
+        // Submit feedback
+        $('#submitFeedbackBtn').click(function() {
+            const feedbackData = {
+                message: $('#feedbackMessage').val()
+            };
+
+            $.ajax({
+                url: '/api-feedback/create/',
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                data: JSON.stringify(feedbackData),
+                success: function() {
+                    $('#sendFeedbackModal').modal('hide');
+                    $('#sendFeedbackForm')[0].reset();
+                    showToast('Feedback sent successfully', 'success');
+                },
+                error: function() {
+                    showToast('Failed to send feedback', 'error');
+                }
+            });
+        });
+
+        // View attendance button
+        $('#viewAttendanceBtn').click(function() {
+            window.location.href = '/attendance-list/';
+        });
+
+        // View results button
+        $('#viewResultsBtn').click(function() {
+            window.location.href = '/my-results/';
+        });
+    
+
+    // Helper functions
+    function loadSubjectsForResults() {
+        $.get('/api-subjects/')
+            .done(function(data) {
+                let options = '<option value="">Select Subject</option>';
+                data.forEach(subject => {
+                    options += `<option value="${subject.id}">${subject.name}</option>`;
+                });
+                $('#resultSubject').html(options);
+            });
+    }
+
+    // Load students when subject is selected
+    $('#resultSubject').change(function() {
+        const subjectId = $(this).val();
+        if (subjectId) {
+            $.get(`/api-subjects/${subjectId}/students/`)
+                .done(function(data) {
+                    let options = '<option value="">Select Student</option>';
+                    data.forEach(student => {
+                        options += `<option value="${student.id}">${student.name}</option>`;
+                    });
+                    $('#resultStudent').html(options);
+                })
+                .fail(function() {
+                    $('#resultStudent').html('<option value="">Select Student</option>');
+                });
+        } else {
+            $('#resultStudent').html('<option value="">Select Student</option>');
+        }
+    });
+
+    // Toast notification function
+    function showToast(message, type = 'info') {
+        const toastHtml = `
+            <div class="toast align-items-center text-white bg-${type === 'error' ? 'danger' : type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        
+        // Create toast container if it doesn't exist
+        if (!$('#toastContainer').length) {
+            $('body').append('<div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3"></div>');
+        }
+        
+        const $toast = $(toastHtml);
+        $('#toastContainer').append($toast);
+        
+        const toast = new bootstrap.Toast($toast[0]);
+        toast.show();
+        
+        // Remove toast element after it's hidden
+        $toast.on('hidden.bs.toast', function() {
+            $(this).remove();
+        });
+    }
+
+    // Auto-refresh dashboard data every 5 minutes
+    setInterval(function() {
+        loadDashboardData();
+    }, 300000);
+
+    // Initialize dashboard
+    loadDashboardData();
+
+    // Add moment.js for time formatting if not already included
+    if (typeof moment === 'undefined') {
+        // Fallback time formatting
+        window.moment = function(date) {
+            return {
+                fromNow: function() {
+                    const now = new Date();
+                    const past = new Date(date);
+                    const diffMs = now - past;
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const diffHours = Math.floor(diffMins / 60);
+                    const diffDays = Math.floor(diffHours / 24);
+                    
+                    if (diffMins < 1) return 'Just now';
+                    if (diffMins < 60) return `${diffMins} minutes ago`;
+                    if (diffHours < 24) return `${diffHours} hours ago`;
+                    return `${diffDays} days ago`;
+                }
+            };
+        };
+    }
+
+    // Responsive adjustments
+    function adjustForMobile() {
+        if ($(window).width() < 768) {
+            $('.small-box .icon').hide();
+            $('.card-header .btn-group').addClass('btn-group-sm');
+        } else {
+            $('.small-box .icon').show();
+            $('.card-header .btn-group').removeClass('btn-group-sm');
+        }
+    }
+
+    // Call on load and resize
+    adjustForMobile();
+    $(window).resize(adjustForMobile);
+
+    // Add loading states
+    function showLoading(element) {
+        $(element).html(`
+            <div class="d-flex justify-content-center align-items-center" style="height: 100px;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        `);
+    }
+
+    // Keyboard shortcuts
+    $(document).keydown(function(e) {
+        // Alt + R to refresh dashboard
+        if (e.altKey && e.which === 82) {
+            e.preventDefault();
+            $('#refreshCharts').click();
+        }
+        
+        // Alt + N to view notifications
+        if (e.altKey && e.which === 78) {
+            e.preventDefault();
+            $('html, body').animate({
+                scrollTop: $('#notificationsList').offset().top - 100
+            }, 500);
+        }
+    });
+
+    // Add keyboard shortcut hints
+    $('body').append(`
+        <div class="position-fixed bottom-0 start-0 p-2 d-none d-lg-block">
+            <small class="text-muted">
+                <kbd>Alt + R</kbd> Refresh | <kbd>Alt + N</kbd> Notifications
+            </small>
+        </div>
+    `);
+
+    console.log('Dashboard initialized for user type:', userType);
+
+</script>
+
+<!-- Add moment.js for better time formatting -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+
+<style>
+/* Custom dashboard styles */
+.small-box {
+    border-radius: 0.5rem;
+    position: relative;
+    display: block;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.small-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.small-box > .inner {
+    padding: 10px;
+}
+
+.small-box > .small-box-footer {
+    position: relative;
+    text-align: center;
+    padding: 3px 0;
+    color: rgba(255,255,255,0.8);
+    color: rgba(0,0,0,0.4);
+    display: block;
+    z-index: 10;
+    background: rgba(0,0,0,0.1);
+    text-decoration: none;
+    border-radius: 0 0 0.5rem 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.small-box > .small-box-footer:hover {
+    color: #fff;
+    background: rgba(0,0,0,0.15);
+}
+
+.small-box h3 {
+    font-size: 2.2rem;
+    font-weight: bold;
+    margin: 0 0 10px 0;
+    white-space: nowrap;
+    padding: 0;
+}
+
+.small-box p {
+    font-size: 1rem;
+}
+
+.small-box .icon {
+    transition: all 0.3s linear;
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    z-index: 0;
+    font-size: 90px;
+    color: rgba(0,0,0,0.15);
+}
+
+.bg-info { background-color: #17a2b8 !important; color: white; }
+.bg-success { background-color: #28a745 !important; color: white; }
+.bg-warning { background-color: #ffc107 !important; color: #212529; }
+.bg-danger { background-color: #dc3545 !important; color: white; }
+.bg-primary { background-color: #007bff !important; color: white; }
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.info-item {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.list-group-item {
+    transition: all 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.toast-container {
+    z-index: 1055;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+    .small-box h3 {
+        font-size: 1.8rem;
+    }
+    
+    .small-box .icon {
+        font-size: 60px;
+        top: 5px;
+        right: 5px;
+    }
+    
+    .card-body canvas {
+        height: 250px !important;
+    }
+}
+
+/* Animation for loading states */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Custom scrollbar for notification lists */
+.list-group {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.list-group::-webkit-scrollbar {
+    width: 6px;
+}
+
+.list-group::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.list-group::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.list-group::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
+{% endblock %}
+
+

@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Records{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Attendance Records</h3>
+        <a href="{% url 'take_attendance' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Take Attendance
+        </a>
+    </div>
+    <div class="card-body">
+        <!-- Filter Section -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <label for="filterSubject" class="form-label">Filter by Subject</label>
+                <select class="form-control" id="filterSubject">
+                    <option value="">All Subjects</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="filterDate" class="form-label">Filter by Date</label>
+                <input type="date" class="form-control" id="filterDate">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button class="btn btn-secondary" id="clearFilters">Clear Filters</button>
+            </div>
+        </div>
+
+        <table id="attendanceTable" class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Date</th>
+                    <th>Total Students</th>
+                    <th>Present</th>
+                    <th>Absent</th>
+                    <th>Attendance %</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data will be loaded via AJAX -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- View Details Modal -->
+<div class="modal fade" id="viewAttendanceModal" tabindex="-1" aria-labelledby="viewAttendanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewAttendanceModalLabel">Attendance Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="attendanceDetails">
+                    <!-- Details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    // CSRF setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load subjects for filter
+    function loadSubjectsFilter() {
+        $.get('/api-subjects/', function(data) {
+            let options = '<option value="">All Subjects</option>';
+            data.forEach(subject => {
+                options += `<option value="${subject.id}">${subject.name}</option>`;
+            });
+            $('#filterSubject').html(options);
+        });
+    }
+
+    // Load attendance records
+    function loadAttendanceRecords() {
+        $.get('/api-attendance/', function(data) {
+            let rows = '';
+            data.forEach(attendance => {
+                const totalStudents = attendance.reports.length;
+                const presentCount = attendance.reports.filter(r => r.status).length;
+                const absentCount = totalStudents - presentCount;
+                const attendancePercentage = totalStudents > 0 ? ((presentCount / totalStudents) * 100).toFixed(1) : 0;
+
+                rows += `<tr>
+                    <td>${attendance.subject_name || 'N/A'}</td>
+                    <td>${attendance.date}</td>
+                    <td>${totalStudents}</td>
+                    <td><span class="badge bg-success">${presentCount}</span></td>
+                    <td><span class="badge bg-danger">${absentCount}</span></td>
+                    <td>${attendancePercentage}%</td>
+                    <td>
+                        <button class="btn btn-sm btn-info view-attendance" data-id="${attendance.id}">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        <button class="btn btn-sm btn-warning edit-attendance" data-id="${attendance.id}">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </td>
+                </tr>`;
+            });
+
+            if ($.fn.DataTable.isDataTable('#attendanceTable')) {
+                $('#attendanceTable').DataTable().destroy();
+            }
+            $('#attendanceTable tbody').html(rows);
+            $('#attendanceTable').DataTable({
+                order: [[1, 'desc']] // Sort by date descending
+            });
+        }).fail(function(xhr) {
+            console.error('Failed to load attendance records:', xhr.responseText);
+            alert('Failed to load attendance records');
+        });
+    }
+
+    // View attendance details
+    $(document).on('click', '.view-attendance', function() {
+        const id = $(this).data('id');
+        $.get(`/api-attendance/${id}/`, function(attendance) {
+            let detailsHtml = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Subject:</strong> ${attendance.subject_name || 'N/A'}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Date:</strong> ${attendance.date}
+                    </div>
+                </div>
+                <h6>Student Attendance:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            attendance.reports.forEach(report => {
+                const statusBadge = report.status 
+                    ? '<span class="badge bg-success">Present</span>' 
+                    : '<span class="badge bg-danger">Absent</span>';
+                detailsHtml += `
+                    <tr>
+                        <td>${report.student_name}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+            
+            detailsHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            $('#attendanceDetails').html(detailsHtml);
+            $('#viewAttendanceModal').modal('show');
+        }).fail(function(xhr) {
+            console.error('Failed to load attendance details:', xhr.responseText);
+            alert('Failed to load attendance details');
+        });
+    });
+
+    // Edit attendance - redirect to take attendance page with ID
+    $(document).on('click', '.edit-attendance', function() {
+        const id = $(this).data('id');
+        window.location.href = `/attendance/take/?edit=${id}`;
+    });
+
+    // Clear filters
+    $('#clearFilters').click(function() {
+        $('#filterSubject').val('');
+        $('#filterDate').val('');
+        loadAttendanceRecords();
+    });
+
+    // Filter functionality
+    $('#filterSubject, #filterDate').change(function() {
+        // Implement filtering logic here
+        loadAttendanceRecords();
+    });
+
+    // Initial load
+    loadSubjectsFilter();
+    loadAttendanceRecords();
+});
+</script>
+{% endblock %}

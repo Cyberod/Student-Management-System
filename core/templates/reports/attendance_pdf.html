@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><title>Attendance Report</title></head>
+<body>
+    <h2>Attendance Report</h2>
+    <table border="1" cellspacing="0" cellpadding="5">
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Subject</th>
+                <th>Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in reports %}
+            <tr>
+                <td>{{ r.student.get_full_name }}</td>
+                <td>{{ r.attendance.subject.name }}</td>
+                <td>{{ r.attendance.date }}</td>
+                <td>{{ "Present" if r.status else "Absent" }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

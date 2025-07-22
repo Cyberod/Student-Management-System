@@ -1,0 +1,284 @@
+{% load static %}
+<!-- Main Sidebar Container -->
+<aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <!-- Brand Logo -->
+    <a href="{% url 'dashboard' %}" class="brand-link">
+        <img src="{% static 'AdminLTELogo.png' %}" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+        <span class="brand-text font-weight-light">Student MS</span>
+    </a>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <!-- Sidebar user panel -->
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+            <div class="image">
+                <img src="{% static 'avatar2.png'%}" class="img-circle elevation- fas fa-user" alt="User Image">
+            </div>
+            <div class="info">
+                <a href="#" class="d-block">{{ user.get_full_name|default:user.username }}</a>
+                <small class="text-muted">
+                    {% if user.user_type == 1 %}
+                        <i class="fas fa-crown text-warning"></i> Administrator
+                    {% elif user.user_type == 2 %}
+                        <i class="fas fa-chalkboard-teacher text-info"></i> Staff
+                    {% elif user.user_type == 3 %}
+                        <i class="fas fa-user-graduate text-success"></i> Student
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+            <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                
+                <!-- Dashboard - Available to All -->
+                <li class="nav-item">
+                    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <i class="nav-icon fas fa-tachometer-alt"></i>
+                        <p>Dashboard</p>
+                    </a>
+                </li>
+
+                {% if user.user_type == 1 %}
+                    <!-- ADMIN MENU -->
+                    <li class="nav-header">ADMINISTRATION</li>
+                    
+                    <!-- User Management -->
+                    <li class="nav-item {% if 'staff' in request.path or 'student' in request.path %}menu-open{% endif %}">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-users"></i>
+                            <p>
+                                User Management
+                                <i class="fas fa-angle-left right"></i>
+                            </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                            <li class="nav-item">
+                                <a href="{% url 'staff_list' %}" class="nav-link {% if request.resolver_match.url_name == 'staff_list' %}active{% endif %}">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>Staff Management</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{% url 'students_list' %}" class="nav-link {% if request.resolver_match.url_name == 'students_list' %}active{% endif %}">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>Student Management</p>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- Academic Management -->
+                    <li class="nav-item {% if 'course' in request.path or 'subject' in request.path %}menu-open{% endif %}">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-graduation-cap"></i>
+                            <p>
+                                Academic Setup
+                                <i class="fas fa-angle-left right"></i>
+                            </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                            <li class="nav-item">
+                                <a href="{% url 'courses_list' %}" class="nav-link {% if request.resolver_match.url_name == 'courses_list' %}active{% endif %}">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>Courses</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{% url 'subjects_list' %}" class="nav-link {% if request.resolver_match.url_name == 'subjects_list' %}active{% endif %}">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>Subjects</p>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- Attendance Management -->
+                    <li class="nav-item {% if 'attendance' in request.path %}menu-open{% endif %}">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-calendar-check"></i>
+                            <p>
+                                Attendance
+                                <i class="fas fa-angle-left right"></i>
+                            </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                            <li class="nav-item">
+                                <a href="{% url 'attendance_list' %}" class="nav-link {% if request.resolver_match.url_name == 'attendance_list' %}active{% endif %}">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>View Records</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{% url 'attendance_reports' %}" class="nav-link {% if request.resolver_match.url_name == 'attendance_reports' %}active{% endif %}">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>Reports & Analytics</p>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- Reports -->
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-chart-bar"></i>
+                            <p>
+                                Reports
+                                <i class="fas fa-angle-left right"></i>
+                            </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                            <li class="nav-item">
+                                <a href="#" class="nav-link">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>Student Reports</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="#" class="nav-link">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>Staff Reports</p>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                {% elif user.user_type == 2 %}
+                    <!-- STAFF MENU -->
+                    <li class="nav-header">TEACHING</li>
+                    
+                    <!-- My Subjects -->
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-book"></i>
+                            <p>My Subjects</p>
+                        </a>
+                    </li>
+
+                    <!-- My Students -->
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-user-graduate"></i>
+                            <p>My Students</p>
+                        </a>
+                    </li>
+
+                    <!-- Attendance -->
+                    <li class="nav-item {% if 'attendance' in request.path %}menu-open{% endif %}">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-calendar-check"></i>
+                            <p>
+                                Attendance
+                                <i class="fas fa-angle-left right"></i>
+                            </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                            <li class="nav-item">
+                                <a href="{% url 'take_attendance' %}" class="nav-link {% if request.resolver_match.url_name == 'take_attendance' %}active{% endif %}">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>Take Attendance</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{% url 'attendance_list' %}" class="nav-link {% if request.resolver_match.url_name == 'attendance_list' %}active{% endif %}">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>View Records</p>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- Results -->
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-clipboard-list"></i>
+                            <p>
+                                Results
+                                <i class="fas fa-angle-left right"></i>
+                            </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                            <li class="nav-item">
+                                <a href="#" class="nav-link">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>Upload Results</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="#" class="nav-link">
+                                    <i class="far fa-circle nav-icon"></i>
+                                    <p>View Results</p>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                {% elif user.user_type == 3 %}
+                    <!-- STUDENT MENU -->
+                    <li class="nav-header">ACADEMICS</li>
+                    
+                    <!-- My Courses -->
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-graduation-cap"></i>
+                            <p>My Courses</p>
+                        </a>
+                    </li>
+
+                    <!-- My Lecturers -->
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-chalkboard-teacher"></i>
+                            <p>My Lecturers</p>
+                        </a>
+                    </li>
+
+                    <!-- Academic Progress -->
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-chart-line"></i>
+                            <p>Academic Progress</p>
+                        </a>
+                    </li>
+
+                    <!-- My Results -->
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-trophy"></i>
+                            <p>My Results</p>
+                        </a>
+                    </li>
+
+                    <!-- My Attendance -->
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-calendar-alt"></i>
+                            <p>My Attendance</p>
+                        </a>
+                    </li>
+
+                {% endif %}
+
+                <!-- Common Menu Items -->
+                <li class="nav-header">ACCOUNT</li>
+                
+                <!-- Profile -->
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="nav-icon fas fa-user"></i>
+                        <p>My Profile</p>
+                    </a>
+                </li>
+
+                <!-- Logout -->
+                <li class="nav-item">
+                    <a href="{% url 'logout' %}" class="nav-link">
+                        <i class="nav-icon fas fa-sign-out-alt"></i>
+                        <p>Logout</p>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</aside>

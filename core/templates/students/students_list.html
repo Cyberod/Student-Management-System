@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% block title %}Students{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Students List</h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addStudentModal">Add Student</button>
+    </div>
+    <div class="card-body">
+        <table id="studentsTable" class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Course</th>
+                    <th>Session</th>
+                    <th>Gender</th>
+                    <th>Phone</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data will be loaded via AJAX -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Student Modal -->
+<div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form id="addStudentForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addStudentModalLabel">Add Student</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="studentUsername" class="form-label">Username</label>
+              <input type="text" class="form-control" id="studentUsername" name="username" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="studentPassword" class="form-label">Password</label>
+              <input type="password" class="form-control" id="studentPassword" name="password" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="studentFirstName" class="form-label">First Name</label>
+              <input type="text" class="form-control" id="studentFirstName" name="first_name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="studentLastName" class="form-label">Last Name</label>
+              <input type="text" class="form-control" id="studentLastName" name="last_name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="studentEmail" class="form-label">Email</label>
+              <input type="email" class="form-control" id="studentEmail" name="email" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="studentAddress" class="form-label">Address</label>
+              <input type="text" class="form-control" id="studentAddress" name="address" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="studentCourse" class="form-label">Course</label>
+              <select class="form-control" id="studentCourse" name="course" required></select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="studentSession" class="form-label">Session</label>
+              <select class="form-control" id="studentSession" name="session" required></select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="studentGender" class="form-label">Gender</label>
+              <select class="form-control" id="studentGender" name="gender" required>
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="studentPhone" class="form-label">Phone</label>
+              <input type="text" class="form-control" id="studentPhone" name="phone" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div class="modal fade" id="editStudentModal" tabindex="-1" aria-labelledby="editStudentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form id="editStudentForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editStudentModalLabel">Edit Student</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <input type="hidden" id="editStudentId">
+            <div class="col-md-6 mb-3">
+              <label for="editStudentFirstName" class="form-label">First Name</label>
+              <input type="text" class="form-control" id="editStudentFirstName" name="first_name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editStudentLastName" class="form-label">Last Name</label>
+              <input type="text" class="form-control" id="editStudentLastName" name="last_name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editStudentCourse" class="form-label">Course</label>
+              <select class="form-control" id="editStudentCourse" name="course" required></select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editStudentSession" class="form-label">Session</label>
+              <select class="form-control" id="editStudentSession" name="session" required></select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editStudentGender" class="form-label">Gender</label>
+              <select class="form-control" id="editStudentGender" name="gender" required>
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editStudentPhone" class="form-label">Phone</label>
+              <input type="text" class="form-control" id="editStudentPhone" name="phone" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editStudentAddress" class="form-label">Address</label>
+              <input type="text" class="form-control" id="editStudentAddress" name="address" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Update</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    // CSRF setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load dropdowns
+    function loadDropdowns() {
+        $.get('/api-courses/', function(data) {
+            let options = '<option value="">Select Course</option>';
+            data.forEach(course => {
+                options += `<option value="${course.id}">${course.name}</option>`;
+            });
+            $('#studentCourse, #editStudentCourse').html(options);
+        });
+        $.get('/api-sessions/', function(data) {
+            let options = '<option value="">Select Session</option>';
+            data.forEach(session => {
+                options += `<option value="${session.id}">${session.start_year} - ${session.end_year}</option>`;
+            });
+            $('#studentSession, #editStudentSession').html(options);
+        });
+    }
+    loadDropdowns();
+
+    // Load students
+    function loadStudents() {
+        $.get('/api-student-profiles/', function(data) {
+            let rows = '';
+            data.forEach(student => {
+                rows += `<tr>
+                    <td>${student.full_name || student.username}</td>
+                    <td>${student.course_name}</td>
+                    <td>${student.session_year_display}</td>
+                    <td>${student.gender}</td>
+                    <td>${student.phone_number}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info edit-student" data-id="${student.id}">Edit</button>
+                        <button class="btn btn-sm btn-danger delete-student" data-id="${student.id}">Delete</button>
+                    </td>
+                </tr>`;
+            });
+            if ($.fn.DataTable.isDataTable('#studentsTable')) {
+                $('#studentsTable').DataTable().destroy();
+            }
+            $('#studentsTable tbody').html(rows);
+            $('#studentsTable').DataTable();
+        }).fail(function(xhr) {
+            console.error('Failed to load students:', xhr.responseText);
+            alert('Failed to load students');
+        });
+    }
+    loadStudents();
+
+    // Add student
+    $('#addStudentForm').submit(function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/api-student-profiles/',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({
+                username: $('#studentUsername').val(),
+                password: $('#studentPassword').val(),
+                first_name: $('#studentFirstName').val(),
+                last_name: $('#studentLastName').val(),
+                email: $('#studentEmail').val(),
+                course: $('#studentCourse').val(),
+                session_year: $('#studentSession').val(),
+                address: $('#studentAddress').val(),
+                gender: $('#studentGender').val(),
+                phone_number: $('#studentPhone').val()
+            }),
+            success: function() {
+                $('#addStudentModal').modal('hide');
+                $('#addStudentForm')[0].reset();
+                loadStudents();
+                alert('Student added successfully!');
+            },
+            error: function(xhr) {
+                console.error('Add failed:', xhr.responseText);
+                alert('Failed to add student: ' + (xhr.responseJSON?.detail || 'Unknown error'));
+            }
+        });
+    });
+
+    // Edit student (show modal)
+    $(document).on('click', '.edit-student', function() {
+        const id = $(this).data('id');
+        $.get(`/api-student-profiles/${id}/`, function(student) {
+            $('#editStudentForm').data('edit-id', id);
+            $('#editStudentFirstName').val(student.first_name || '');
+            $('#editStudentLastName').val(student.last_name || '');
+            $('#editStudentCourse').val(student.course);
+            $('#editStudentSession').val(student.session_year);
+            $('#editStudentGender').val(student.gender);
+            $('#editStudentPhone').val(student.phone_number);
+            $('#editStudentModal').modal('show');
+        }).fail(function(xhr) {
+            console.error('Failed to load student details:', xhr.responseText);
+            alert('Failed to load student details');
+        });
+    });
+
+    // Update student
+    $('#editStudentForm').submit(function(e) {
+        e.preventDefault();
+        const editId = $(this).data('edit-id');
+
+        $.ajax({
+            url: `/api-student-profiles/${editId}/`,
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({
+                first_name: $('#editStudentFirstName').val(),
+                last_name: $('#editStudentLastName').val(),
+                course: $('#editStudentCourse').val(),
+                session_year: $('#editStudentSession').val(),
+                gender: $('#editStudentGender').val(),
+                phone_number: $('#editStudentPhone').val(),
+                address: $('#editStudentAddress').val() || "",
+            }),
+            success: function() {
+                $('#editStudentModal').modal('hide');
+                $('#editStudentForm')[0].reset();
+                loadStudents();
+                alert('Student updated successfully!');
+            },
+            error: function(xhr) {
+                console.error('Update failed:', xhr.responseText);
+                alert('Failed to update student: ' + (xhr.responseJSON?.detail || 'Unknown error'));
+            }
+        });
+    });
+
+    // Delete student
+    $(document).on('click', '.delete-student', function() {
+        const id = $(this).data('id');
+        if(confirm('Are you sure you want to delete this student?')) {
+            $.ajax({
+                url: `/api-student-profiles/${id}/`,
+                method: 'DELETE',
+                success: function() {
+                    loadStudents();
+                    alert('Student deleted successfully!');
+                },
+                error: function(xhr) {
+                    console.error('Delete failed:', xhr.responseText);
+                    alert('Failed to delete student');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

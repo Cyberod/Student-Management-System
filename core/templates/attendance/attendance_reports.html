@@ -1,0 +1,1040 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Reports{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">Attendance Reports & Analytics</h3>
+                    <div class="btn-group">
+                        <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" id="exportCSV"><i class="fas fa-file-csv"></i> Export CSV</a></li>
+                            <li><a class="dropdown-item" href="#" id="exportPDF"><i class="fas fa-file-pdf"></i> Export PDF</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Filter Section -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <label for="reportSubject" class="form-label">Subject</label>
+                            <select class="form-control" id="reportSubject">
+                                <option value="">All Subjects</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="reportCourse" class="form-label">Course</label>
+                            <select class="form-control" id="reportCourse">
+                                <option value="">All Courses</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="reportStartDate" class="form-label">From Date</label>
+                            <input type="date" class="form-control" id="reportStartDate">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="reportEndDate" class="form-label">To Date</label>
+                            <input type="date" class="form-control" id="reportEndDate">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-primary w-100" id="generateReport">
+                                <i class="fas fa-chart-bar"></i> Generate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4" id="statsCards" style="display: none;">
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-info">
+                <div class="inner">
+                    <h3 id="totalClasses">0</h3>
+                    <p>Total Classes</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-success">
+                <div class="inner">
+                    <h3 id="totalPresent">0</h3>
+                    <p>Total Present</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-danger">
+                <div class="inner">
+                    <h3 id="totalAbsent">0</h3>
+                    <p>Total Absent</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-user-times"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="small-box bg-warning">
+                <div class="inner">
+                    <h3 id="overallAttendance">0%</h3>
+                    <p>Overall Attendance</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-percentage"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4" id="chartsSection" style="display: none;">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="card-title">Attendance Trend</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="attendanceTrendChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3 class="card-title">Subject-wise Attendance</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="subjectAttendanceChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Reports Tabs -->
+    <div class="row" id="detailedReports" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs card-header-tabs" id="reportTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">
+                                <i class="fas fa-chart-pie"></i> Summary Report
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="student-tab" data-bs-toggle="tab" data-bs-target="#student" type="button" role="tab">
+                                <i class="fas fa-users"></i> Student-wise Report
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="daily-tab" data-bs-toggle="tab" data-bs-target="#daily" type="button" role="tab">
+                                <i class="fas fa-calendar-day"></i> Daily Report
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="defaulters-tab" data-bs-toggle="tab" data-bs-target="#defaulters" type="button" role="tab">
+                                <i class="fas fa-exclamation-triangle"></i> Low Attendance
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="reportTabsContent">
+                        <!-- Summary Report Tab -->
+                        <div class="tab-pane fade show active" id="summary" role="tabpanel">
+                            <div class="table-responsive">
+                                <table id="summaryTable" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Subject</th>
+                                            <th>Total Classes</th>
+                                            <th>Total Students</th>
+                                            <th>Present</th>
+                                            <th>Absent</th>
+                                            <th>Attendance %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="summaryTableBody">
+                                        <!-- Data will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Student-wise Report Tab -->
+                        <div class="tab-pane fade" id="student" role="tabpanel">
+                            <div class="table-responsive">
+                                <table id="studentTable" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Student Name</th>
+                                            <th>Course</th>
+                                            <th>Total Classes</th>
+                                            <th>Present</th>
+                                            <th>Absent</th>
+                                            <th>Attendance %</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="studentTableBody">
+                                        <!-- Data will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Daily Report Tab -->
+                        <div class="tab-pane fade" id="daily" role="tabpanel">
+                            <div class="table-responsive">
+                                <table id="dailyTable" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Subject</th>
+                                            <th>Total Students</th>
+                                            <th>Present</th>
+                                            <th>Absent</th>
+                                            <th>Attendance %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dailyTableBody">
+                                        <!-- Data will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Low Attendance Tab -->
+                        <div class="tab-pane fade" id="defaulters" role="tabpanel">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Students with attendance below 75% are highlighted in red.
+                            </div>
+                            <div class="table-responsive">
+                                <table id="defaultersTable" class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Student Name</th>
+                                            <th>Course</th>
+                                            <th>Subject</th>
+                                            <th>Total Classes</th>
+                                            <th>Present</th>
+                                            <th>Attendance %</th>
+                                            <th>Action Required</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="defaultersTableBody">
+                                        <!-- Data will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Generating reports...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    let reportData = {};
+    let attendanceTrendChart = null;
+    let subjectAttendanceChart = null;
+
+    // Set default date range (last 30 days)
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+    $('#reportEndDate').val(today.toISOString().split('T')[0]);
+    $('#reportStartDate').val(thirtyDaysAgo.toISOString().split('T')[0]);
+
+    // CSRF setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load filter options
+    function loadFilterOptions() {
+        // Load subjects
+        $.get('/api-subjects/', function(data) {
+            let options = '<option value="">All Subjects</option>';
+            data.forEach(subject => {
+                options += `<option value="${subject.id}">${subject.name}</option>`;
+            });
+            $('#reportSubject').html(options);
+        });
+
+        // Load courses
+        $.get('/api-courses/', function(data) {
+            let options = '<option value="">All Courses</option>';
+            data.forEach(course => {
+                options += `<option value="${course.id}">${course.name}</option>`;
+            });
+            $('#reportCourse').html(options);
+        });
+    }
+
+    // Generate report
+    $('#generateReport').click(function() {
+        const filters = {
+            subject: $('#reportSubject').val(),
+            course: $('#reportCourse').val(),
+            start_date: $('#reportStartDate').val(),
+            end_date: $('#reportEndDate').val()
+        };
+
+        if (!filters.start_date || !filters.end_date) {
+            alert('Please select both start and end dates.');
+            return;
+        }
+
+        $('#loadingModal').modal('show');
+        generateAttendanceReport(filters);
+    });
+    // Generate attendance report
+    function generateAttendanceReport(filters) {
+        // Get attendance analytics
+        $.get('/api-attendance/analytics/', filters)
+            .done(function(analyticsData) {
+                // Get detailed attendance data
+                $.get('/api-attendance/', filters)
+                    .done(function(attendanceData) {
+                        reportData = {
+                            analytics: analyticsData,
+                            attendance: attendanceData,
+                            filters: filters
+                        };
+                        
+                        displayReportResults();
+                        $('#loadingModal').modal('hide');
+                    })
+                    .fail(function(xhr) {
+                        $('#loadingModal').modal('hide');
+                        console.error('Failed to load attendance data:', xhr.responseText);
+                        alert('Failed to load attendance data.');
+                    });
+            })
+            .fail(function(xhr) {
+                $('#loadingModal').modal('hide');
+                console.error('Failed to load analytics:', xhr.responseText);
+                alert('Failed to load analytics data.');
+            });
+    }
+
+    // Display report results
+    function displayReportResults() {
+        updateStatisticsCards();
+        generateCharts();
+        populateReportTables();
+        
+        // Show all report sections
+        $('#statsCards').show();
+        $('#chartsSection').show();
+        $('#detailedReports').show();
+    }
+
+    // Update statistics cards
+    function updateStatisticsCards() {
+        const analytics = reportData.analytics;
+        const attendance = reportData.attendance;
+        
+        let totalClasses = attendance.length;
+        let totalPresent = 0;
+        let totalAbsent = 0;
+        
+        attendance.forEach(record => {
+            record.reports.forEach(report => {
+                if (report.status) {
+                    totalPresent++;
+                } else {
+                    totalAbsent++;
+                }
+            });
+        });
+        
+        const overallAttendance = (totalPresent + totalAbsent) > 0 
+            ? ((totalPresent / (totalPresent + totalAbsent)) * 100).toFixed(1)
+            : 0;
+        
+        $('#totalClasses').text(totalClasses);
+        $('#totalPresent').text(totalPresent);
+        $('#totalAbsent').text(totalAbsent);
+        $('#overallAttendance').text(overallAttendance + '%');
+    }
+
+    // Generate charts
+    function generateCharts() {
+        generateAttendanceTrendChart();
+        generateSubjectAttendanceChart();
+    }
+
+    // Generate attendance trend chart
+    function generateAttendanceTrendChart() {
+        const ctx = document.getElementById('attendanceTrendChart').getContext('2d');
+        
+        // Destroy existing chart
+        if (attendanceTrendChart) {
+            attendanceTrendChart.destroy();
+        }
+        
+        // Process data for trend chart
+        const dateMap = {};
+        reportData.attendance.forEach(record => {
+            const date = record.date;
+            if (!dateMap[date]) {
+                dateMap[date] = { present: 0, absent: 0 };
+            }
+            
+            record.reports.forEach(report => {
+                if (report.status) {
+                    dateMap[date].present++;
+                } else {
+                    dateMap[date].absent++;
+                }
+            });
+        });
+        
+        const dates = Object.keys(dateMap).sort();
+        const presentData = dates.map(date => dateMap[date].present);
+        const absentData = dates.map(date => dateMap[date].absent);
+        const attendancePercentages = dates.map(date => {
+            const total = dateMap[date].present + dateMap[date].absent;
+            return total > 0 ? ((dateMap[date].present / total) * 100).toFixed(1) : 0;
+        });
+        
+        attendanceTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Attendance %',
+                    data: attendancePercentages,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Attendance: ' + context.parsed.y + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Generate subject-wise attendance chart
+    function generateSubjectAttendanceChart() {
+        const ctx = document.getElementById('subjectAttendanceChart').getContext('2d');
+        
+        // Destroy existing chart
+        if (subjectAttendanceChart) {
+            subjectAttendanceChart.destroy();
+        }
+        
+        // Process data for subject chart
+        const subjectMap = {};
+        reportData.attendance.forEach(record => {
+            const subject = record.subject_name || 'Unknown';
+            if (!subjectMap[subject]) {
+                subjectMap[subject] = { present: 0, absent: 0 };
+            }
+            
+            record.reports.forEach(report => {
+                if (report.status) {
+                    subjectMap[subject].present++;
+                } else {
+                    subjectMap[subject].absent++;
+                }
+            });
+        });
+        
+        const subjects = Object.keys(subjectMap);
+        const attendancePercentages = subjects.map(subject => {
+            const total = subjectMap[subject].present + subjectMap[subject].absent;
+            return total > 0 ? ((subjectMap[subject].present / total) * 100).toFixed(1) : 0;
+        });
+        
+        subjectAttendanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: subjects,
+                datasets: [{
+                    label: 'Attendance %',
+                    data: attendancePercentages,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(255, 159, 64, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 205, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Populate report tables
+    function populateReportTables() {
+        populateSummaryTable();
+        populateStudentTable();
+        populateDailyTable();
+        populateDefaultersTable();
+    }
+
+    // Populate summary table
+    function populateSummaryTable() {
+        const subjectMap = {};
+        
+        reportData.attendance.forEach(record => {
+            const subject = record.subject_name || 'Unknown';
+            if (!subjectMap[subject]) {
+                subjectMap[subject] = { 
+                    classes: 0, 
+                    students: new Set(), 
+                    present: 0, 
+                    absent: 0 
+                };
+            }
+            
+            subjectMap[subject].classes++;
+            record.reports.forEach(report => {
+                subjectMap[subject].students.add(report.student);
+                if (report.status) {
+                    subjectMap[subject].present++;
+                } else {
+                    subjectMap[subject].absent++;
+                }
+            });
+        });
+        
+        let summaryRows = '';
+        Object.keys(subjectMap).forEach(subject => {
+            const data = subjectMap[subject];
+            const total = data.present + data.absent;
+            const percentage = total > 0 ? ((data.present / total) * 100).toFixed(1) : 0;
+            
+            summaryRows += `
+                <tr>
+                    <td>${subject}</td>
+                    <td>${data.classes}</td>
+                    <td>${data.students.size}</td>
+                    <td><span class="badge bg-success">${data.present}</span></td>
+                    <td><span class="badge bg-danger">${data.absent}</span></td>
+                    <td>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar ${percentage >= 75 ? 'bg-success' : percentage >= 50 ? 'bg-warning' : 'bg-danger'}" 
+                                 style="width: ${percentage}%">${percentage}%</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        $('#summaryTableBody').html(summaryRows);
+        
+        // Initialize DataTable
+        if ($.fn.DataTable.isDataTable('#summaryTable')) {
+            $('#summaryTable').DataTable().destroy();
+        }
+        $('#summaryTable').DataTable({
+            order: [[5, 'desc']] // Sort by attendance percentage
+        });
+    }
+
+    // Populate student table
+    function populateStudentTable() {
+        const studentMap = {};
+        
+        reportData.attendance.forEach(record => {
+            record.reports.forEach(report => {
+                const studentId = report.student;
+                const studentName = report.student_name;
+                
+                if (!studentMap[studentId]) {
+                    studentMap[studentId] = {
+                        name: studentName,
+                        course: 'N/A', // You might need to add this to your API
+                        classes: 0,
+                        present: 0,
+                        absent: 0
+                    };
+                }
+                
+                studentMap[studentId].classes++;
+                if (report.status) {
+                    studentMap[studentId].present++;
+                } else {
+                    studentMap[studentId].absent++;
+                }
+            });
+        });
+        
+        let studentRows = '';
+        Object.keys(studentMap).forEach(studentId => {
+            const data = studentMap[studentId];
+            const percentage = data.classes > 0 ? ((data.present / data.classes) * 100).toFixed(1) : 0;
+            const status = percentage >= 75 ? 'Good' : percentage >= 50 ? 'Average' : 'Poor';
+            const statusClass = percentage >= 75 ? 'success' : percentage >= 50 ? 'warning' : 'danger';
+            
+            studentRows += `
+                <tr class="${percentage < 75 ? 'table-danger' : ''}">
+                    <td>${data.name}</td>
+                    <td>${data.course}</td>
+                    <td>${data.classes}</td>
+                    <td><span class="badge bg-success">${data.present}</span></td>
+                    <td><span class="badge bg-danger">${data.absent}</span></td>
+                    <td>${percentage}%</td>
+                    <td><span class="badge bg-${statusClass}">${status}</span></td>
+                </tr>
+            `;
+        });
+        
+        $('#studentTableBody').html(studentRows);
+        
+        // Initialize DataTable
+        if ($.fn.DataTable.isDataTable('#studentTable')) {
+            $('#studentTable').DataTable().destroy();
+        }
+        $('#studentTable').DataTable({
+            order: [[5, 'asc']] // Sort by attendance percentage (lowest first)
+        });
+    }
+
+    // Populate daily table
+    function populateDailyTable() {
+        let dailyRows = '';
+        
+        reportData.attendance.forEach(record => {
+            const totalStudents = record.reports.length;
+            const present = record.reports.filter(r => r.status).length;
+            const absent = totalStudents - present;
+            const percentage = totalStudents > 0 ? ((present / totalStudents) * 100).toFixed(1) : 0;
+            
+            dailyRows += `
+                <tr>
+                    <td>${record.date}</td>
+                    <td>${record.subject_name || 'N/A'}</td>
+                    <td>${totalStudents}</td>
+                    <td><span class="badge bg-success">${present}</span></td>
+                    <td><span class="badge bg-danger">${absent}</span></td>
+                    <td>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar ${percentage >= 75 ? 'bg-success' : percentage >= 50 ? 'bg-warning' : 'bg-danger'}" 
+                                 style="width: ${percentage}%">${percentage}%</div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        $('#dailyTableBody').html(dailyRows);
+        
+        // Initialize DataTable
+        if ($.fn.DataTable.isDataTable('#dailyTable')) {
+            $('#dailyTable').DataTable().destroy();
+        }
+        $('#dailyTable').DataTable({
+            order: [[0, 'desc']] // Sort by date (newest first)
+        });
+    }
+
+    // Populate defaulters table (students with low attendance)
+    function populateDefaultersTable() {
+        const studentMap = {};
+        
+        reportData.attendance.forEach(record => {
+            record.reports.forEach(report => {
+                const studentId = report.student;
+                const studentName = report.student_name;
+                const subject = record.subject_name || 'Unknown';
+                
+                const key = `${studentId}_${subject}`;
+                if (!studentMap[key]) {
+                    studentMap[key] = {
+                        name: studentName,
+                        course: 'N/A',
+                        subject: subject,
+                        classes: 0,
+                        present: 0
+                    };
+                }
+                
+                studentMap[key].classes++;
+                if (report.status) {
+                    studentMap[key].present++;
+                }
+            });
+        });
+        
+        let defaultersRows = '';
+        Object.keys(studentMap).forEach(key => {
+            const data = studentMap[key];
+            const percentage = data.classes > 0 ? ((data.present / data.classes) * 100).toFixed(1) : 0;
+            // Only show students with attendance below 75%
+            if (percentage < 75) {
+                const actionRequired = percentage < 50 ? 'Immediate Action' : 
+                                     percentage < 65 ? 'Warning Letter' : 'Counseling';
+                const actionClass = percentage < 50 ? 'danger' : 
+                                   percentage < 65 ? 'warning' : 'info';
+                
+                defaultersRows += `
+                    <tr class="table-danger">
+                        <td>${data.name}</td>
+                        <td>${data.course}</td>
+                        <td>${data.subject}</td>
+                        <td>${data.classes}</td>
+                        <td>${data.present}</td>
+                        <td>
+                            <span class="badge bg-danger">${percentage}%</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-${actionClass}">${actionRequired}</span>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
+        
+        if (defaultersRows === '') {
+            defaultersRows = `
+                <tr>
+                    <td colspan="7" class="text-center text-success">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i><br>
+                        Great! No students with low attendance found.
+                    </td>
+                </tr>
+            `;
+        }
+        
+        $('#defaultersTableBody').html(defaultersRows);
+        
+        // Initialize DataTable
+        if ($.fn.DataTable.isDataTable('#defaultersTable')) {
+            $('#defaultersTable').DataTable().destroy();
+        }
+        $('#defaultersTable').DataTable({
+            order: [[5, 'asc']] // Sort by attendance percentage (lowest first)
+        });
+    }
+
+    // Export functionality
+    $('#exportCSV').click(function() {
+        const filters = reportData.filters;
+        const params = new URLSearchParams(filters).toString();
+        window.open(`/api-reports/attendance/csv/?${params}`, '_blank');
+    });
+
+    $('#exportPDF').click(function() {
+        const filters = reportData.filters;
+        const params = new URLSearchParams(filters).toString();
+        window.open(`/api-reports/attendance/pdf/?${params}`, '_blank');
+    });
+
+    // Print functionality
+    function printReport() {
+        const printWindow = window.open('', '_blank');
+        const reportHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Attendance Report</title>
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                <style>
+                    @media print {
+                        .no-print { display: none !important; }
+                        .page-break { page-break-before: always; }
+                    }
+                    .small-box {
+                        background: #f8f9fa;
+                        border: 1px solid #dee2e6;
+                        border-radius: 0.375rem;
+                        padding: 1rem;
+                        margin-bottom: 1rem;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container-fluid">
+                    <div class="text-center mb-4">
+                        <h2>Attendance Report</h2>
+                        <p>Period: ${reportData.filters.start_date} to ${reportData.filters.end_date}</p>
+                    </div>
+                    
+                    <!-- Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-3">
+                            <div class="small-box">
+                                <h4>${$('#totalClasses').text()}</h4>
+                                <p>Total Classes</p>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="small-box">
+                                <h4>${$('#totalPresent').text()}</h4>
+                                <p>Total Present</p>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="small-box">
+                                <h4>${$('#totalAbsent').text()}</h4>
+                                <p>Total Absent</p>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="small-box">
+                                <h4>${$('#overallAttendance').text()}</h4>
+                                <p>Overall Attendance</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Summary Table -->
+                    <div class="page-break">
+                        <h4>Summary Report</h4>
+                        ${$('#summaryTable')[0].outerHTML}
+                    </div>
+                    
+                    <!-- Student Table -->
+                    <div class="page-break">
+                        <h4>Student-wise Report</h4>
+                        ${$('#studentTable')[0].outerHTML}
+                    </div>
+                    
+                    <!-- Low Attendance -->
+                    <div class="page-break">
+                        <h4>Students with Low Attendance</h4>
+                        ${$('#defaultersTable')[0].outerHTML}
+                    </div>
+                </div>
+            </body>
+            </html>
+        `;
+        
+        printWindow.document.write(reportHtml);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 1000);
+    }
+
+    // Add print button to export dropdown
+    $('.dropdown-menu').append(`
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#" id="printReport"><i class="fas fa-print"></i> Print Report</a></li>
+    `);
+
+    $('#printReport').click(function(e) {
+        e.preventDefault();
+        if (Object.keys(reportData).length === 0) {
+            alert('Please generate a report first.');
+            return;
+        }
+        printReport();
+    });
+
+    // Auto-refresh functionality
+    let autoRefreshInterval;
+    function startAutoRefresh() {
+        autoRefreshInterval = setInterval(() => {
+            if (Object.keys(reportData).length > 0) {
+                console.log('Auto-refreshing report data...');
+                generateAttendanceReport(reportData.filters);
+            }
+        }, 300000); // Refresh every 5 minutes
+    }
+
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+        }
+    }
+
+    // Add auto-refresh toggle
+    $('.card-header .btn-group').append(`
+        <button class="btn btn-light" type="button" id="toggleAutoRefresh">
+            <i class="fas fa-sync-alt"></i> Auto Refresh: OFF
+        </button>
+    `);
+
+    let autoRefreshEnabled = false;
+    $('#toggleAutoRefresh').click(function() {
+        autoRefreshEnabled = !autoRefreshEnabled;
+        if (autoRefreshEnabled) {
+            $(this).html('<i class="fas fa-sync-alt fa-spin"></i> Auto Refresh: ON');
+            $(this).removeClass('btn-light').addClass('btn-success');
+            startAutoRefresh();
+        } else {
+            $(this).html('<i class="fas fa-sync-alt"></i> Auto Refresh: OFF');
+            $(this).removeClass('btn-success').addClass('btn-light');
+            stopAutoRefresh();
+        }
+    });
+
+    // Keyboard shortcuts
+    $(document).keydown(function(e) {
+        // Ctrl + G to generate report
+        if (e.ctrlKey && e.which === 71) {
+            e.preventDefault();
+            $('#generateReport').click();
+        }
+        
+        // Ctrl + P to print
+        if (e.ctrlKey && e.which === 80) {
+            e.preventDefault();
+            if (Object.keys(reportData).length > 0) {
+                printReport();
+            }
+        }
+        
+        // Ctrl + E to export CSV
+        if (e.ctrlKey && e.which === 69) {
+            e.preventDefault();
+            if (Object.keys(reportData).length > 0) {
+                $('#exportCSV').click();
+            }
+        }
+    });
+
+    // Responsive chart resize
+    $(window).resize(function() {
+        if (attendanceTrendChart) {
+            attendanceTrendChart.resize();
+        }
+        if (subjectAttendanceChart) {
+            subjectAttendanceChart.resize();
+        }
+    });
+
+    // Cleanup on page unload
+    $(window).on('beforeunload', function() {
+        stopAutoRefresh();
+        if (attendanceTrendChart) {
+            attendanceTrendChart.destroy();
+        }
+        if (subjectAttendanceChart) {
+            subjectAttendanceChart.destroy();
+        }
+    });
+
+    // Initialize
+    loadFilterOptions();
+    
+    // Show helpful tooltip
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Add tooltips to buttons
+    $('#generateReport').attr('title', 'Ctrl + G');
+    $('#exportCSV').attr('title', 'Ctrl + E');
+    $('#printReport').attr('title', 'Ctrl + P');
+    
+    console.log('Attendance Reports initialized successfully');
+});
+</script>
+{% endblock %}

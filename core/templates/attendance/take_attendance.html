@@ -1,0 +1,530 @@
+
+
+{% extends 'base.html' %}
+{% block title %}Take Attendance{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Take Attendance</h3>
+        <a href="{% url 'attendance_list' %}" class="btn btn-primary">
+            <i class="fas fa-list "></i> View All Attendance
+        </a>
+    </div>
+    <div class="card-body">
+        <!-- Step 1: Select Subject and Date -->
+        <div id="step1" class="attendance-step">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="attendanceSubject" class="form-label">Select Subject <span class="text-danger">*</span></label>
+                        <select class="form-control" id="attendanceSubject" required>
+                            <option value="">Choose a subject...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="attendanceDate" class="form-label">Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="attendanceDate" required>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button type="button" class="btn btn-primary" id="loadStudents">
+                        <i class="fas fa-users"></i> Load Students
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Mark Attendance -->
+        <div id="step2" class="attendance-step" style="display: none;">
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <h5 id="attendanceInfo"></h5>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button type="button" class="btn btn-success btn-sm" id="markAllPresent">
+                        <i class="fas fa-check-double"></i> Mark All Present
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" id="markAllAbsent">
+                        <i class="fas fa-times"></i> Mark All Absent
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="info-box bg-info">
+                        <span class="info-box-icon"><i class="fas fa-users"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Total Students</span>
+                            <span class="info-box-number" id="totalStudents">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box bg-success">
+                        <span class="info-box-icon"><i class="fas fa-user-check"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Present</span>
+                            <span class="info-box-number" id="presentCount">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box bg-danger">
+                        <span class="info-box-icon"><i class="fas fa-user-times"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Absent</span>
+                            <span class="info-box-number" id="absentCount">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box bg-warning">
+                        <span class="info-box-icon"><i class="fas fa-percentage"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Attendance %</span>
+                            <span class="info-box-number" id="attendancePercentage">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students List -->
+            <form id="attendanceForm">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th width="5%">#</th>
+                                <th width="40%">Student Name</th>
+                                <th width="15%">Course</th>
+                                <th width="20%">Status</th>
+                                <th width="20%">Quick Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            <!-- Students will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-secondary" id="backToStep1">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button type="submit" class="btn btn-success btn-lg" id="saveAttendance">
+                            <i class="fas fa-save"></i> Save Attendance
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Processing attendance...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    let currentStudents = [];
+    let editMode = false;
+    let editAttendanceId = null;
+
+    // Check if we're in edit mode
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('edit')) {
+        editAttendanceId = urlParams.get('edit');
+        editMode = true;
+        loadExistingAttendance(editAttendanceId);
+    }
+
+    // Set today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    $('#attendanceDate').val(today);
+
+    // CSRF setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load subjects for current user
+    function loadSubjects() {
+        $.get('/api-subjects/', function(data) {
+            let options = '<option value="">Choose a subject...</option>';
+            data.forEach(subject => {
+                options += `<option value="${subject.id}" data-course="${subject.course}">${subject.name} (${subject.course_name})</option>`;
+            });
+            $('#attendanceSubject').html(options);
+        }).fail(function(xhr) {
+            console.error('Failed to load subjects:', xhr.responseText);
+            alert('Failed to load subjects. Please refresh the page.');
+        });
+    }
+
+    // Load students for selected subject
+    function loadStudentsForSubject(subjectId, courseId) {
+        $.get('/api-student-profiles/', function(data) {
+            // Filter students by course
+            currentStudents = data.filter(student => student.course == courseId);
+            
+            if (currentStudents.length === 0) {
+                alert('No students found for this subject/course.');
+                return;
+            }
+
+            displayStudents();
+            $('#step1').hide();
+            $('#step2').show();
+            
+            const subjectName = $('#attendanceSubject option:selected').text();
+            const date = $('#attendanceDate').val();
+            $('#attendanceInfo').text(`Taking attendance for: ${subjectName} on ${date}`);
+            
+        }).fail(function(xhr) {
+            console.error('Failed to load students:', xhr.responseText);
+            alert('Failed to load students.');
+        });
+    }
+
+    // Display students in table
+    function displayStudents() {
+        let tableRows = '';
+        currentStudents.forEach((student, index) => {
+            tableRows += `
+                <tr data-student-id="${student.id}">
+                    <td>${index + 1}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="student-avatar me-2">
+                                <i class="fas fa-user-circle fa-2x text-secondary"></i>
+                            </div>
+                            <div>
+                                <strong>${student.full_name}</strong><br>
+                                <small class="text-muted">${student.phone_number || 'N/A'}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${student.course_name}</td>
+                    <td>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input attendance-status" type="checkbox" 
+                                   id="student_${student.id}" data-student-id="${student.id}" checked>
+                            <label class="form-check-label status-label" for="student_${student.id}">
+                                <span class="badge bg-success">Present</span>
+                            </label>
+                        </div>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-success mark-present" data-student-id="${student.id}">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger mark-absent" data-student-id="${student.id}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        $('#studentsTableBody').html(tableRows);
+        updateStats();
+    }
+
+    // Update attendance statistics
+    function updateStats() {
+        const total = currentStudents.length;
+        const present = $('.attendance-status:checked').length;
+        const absent = total - present;
+        const percentage = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+
+        $('#totalStudents').text(total);
+        $('#presentCount').text(present);
+        $('#absentCount').text(absent);
+        $('#attendancePercentage').text(percentage + '%');
+    }
+
+    // Load Students button click
+    $('#loadStudents').click(function() {
+        const subjectId = $('#attendanceSubject').val();
+        const date = $('#attendanceDate').val();
+        
+        if (!subjectId) {
+            alert('Please select a subject.');
+            return;
+        }
+        
+        if (!date) {
+            alert('Please select a date.');
+            return;
+        }
+
+        const courseId = $('#attendanceSubject option:selected').data('course');
+        loadStudentsForSubject(subjectId, courseId);
+    });
+
+    // Attendance status change
+    $(document).on('change', '.attendance-status', function() {
+        const checkbox = $(this);
+        const label = checkbox.siblings('.status-label');
+        
+        if (checkbox.is(':checked')) {
+            label.html('<span class="badge bg-success">Present</span>');
+        } else {
+            label.html('<span class="badge bg-danger">Absent</span>');
+        }
+        
+        updateStats();
+    });
+
+    // Quick action buttons
+    $(document).on('click', '.mark-present', function() {
+        const studentId = $(this).data('student-id');
+        $(`#student_${studentId}`).prop('checked', true).trigger('change');
+    });
+
+    $(document).on('click', '.mark-absent', function() {
+        const studentId = $(this).data('student-id');
+        $(`#student_${studentId}`).prop('checked', false).trigger('change');
+    });
+
+    // Mark all present/absent
+    $('#markAllPresent').click(function() {
+        $('.attendance-status').prop('checked', true).trigger('change');
+    });
+
+    $('#markAllAbsent').click(function() {
+        $('.attendance-status').prop('checked', false).trigger('change');
+    });
+
+    // Back to step 1
+    $('#backToStep1').click(function() {
+        $('#step2').hide();
+        $('#step1').show();
+    });
+
+    // Save attendance
+    $('#attendanceForm').submit(function(e) {
+        e.preventDefault();
+        
+        const subjectId = $('#attendanceSubject').val();
+        const date = $('#attendanceDate').val();
+
+            // Prepare attendance reports data
+        const reports = [];
+        $('.attendance-status').each(function() {
+            const studentId = $(this).data('student-id');
+            const status = $(this).is(':checked');
+            reports.push({
+                student: studentId,
+                status: status
+            });
+        });
+
+        const attendanceData = {
+            subject: parseInt(subjectId),
+            date: date,
+            reports: reports
+        };
+
+        $('#loadingModal').modal('show');
+
+        const url = editMode ? `/api-attendance/${editAttendanceId}/` : '/api-attendance/create/';
+        const method = editMode ? 'PUT' : 'POST';
+
+        $.ajax({
+            url: url,
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            data: JSON.stringify(attendanceData),
+            success: function(response) {
+                $('#loadingModal').modal('hide');
+                const message = editMode ? 'Attendance updated successfully!' : 'Attendance saved successfully!';
+                alert(message);
+                window.location.href = '{% url "attendance_list" %}';
+            },
+            error: function(xhr, status, error) {
+                $('#loadingModal').modal('hide');
+                console.error('Save attendance failed:', error);
+                console.error('Response:', xhr.responseText);
+                
+                let errorMessage = 'Failed to save attendance.';
+                if (xhr.responseJSON) {
+                    if (xhr.responseJSON.non_field_errors) {
+                        errorMessage = xhr.responseJSON.non_field_errors[0];
+                    } else if (xhr.responseJSON.detail) {
+                        errorMessage = xhr.responseJSON.detail;
+                    }
+                }
+                alert(errorMessage);
+            }
+        });
+    });
+
+    // Load existing attendance for edit mode
+    function loadExistingAttendance(attendanceId) {
+        $.get(`/api-attendance/${attendanceId}/`, function(attendance) {
+            // Set subject and date
+            $('#attendanceSubject').val(attendance.subject);
+            $('#attendanceDate').val(attendance.date);
+            
+            // Load students and set their attendance status
+            const courseId = attendance.course; // You might need to add this to your API response
+            loadStudentsForSubject(attendance.subject, courseId);
+            
+            // After students are loaded, set their status
+            setTimeout(() => {
+                attendance.reports.forEach(report => {
+                    $(`#student_${report.student}`).prop('checked', report.status).trigger('change');
+                });
+            }, 1000);
+            
+        }).fail(function(xhr) {
+            console.error('Failed to load existing attendance:', xhr.responseText);
+            alert('Failed to load attendance data for editing.');
+        });
+    }
+
+    // Keyboard shortcuts
+    $(document).keydown(function(e) {
+        // Ctrl + S to save
+        if (e.ctrlKey && e.which === 83) {
+            e.preventDefault();
+            if ($('#step2').is(':visible')) {
+                $('#attendanceForm').submit();
+            }
+        }
+        
+        // Ctrl + A to mark all present
+        if (e.ctrlKey && e.which === 65) {
+            e.preventDefault();
+            if ($('#step2').is(':visible')) {
+                $('#markAllPresent').click();
+            }
+        }
+    });
+
+    // Auto-save draft functionality (optional)
+    let autoSaveTimer;
+    $(document).on('change', '.attendance-status', function() {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(function() {
+            // Save draft to localStorage
+            const draftData = {
+                subject: $('#attendanceSubject').val(),
+                date: $('#attendanceDate').val(),
+                reports: []
+            };
+            
+            $('.attendance-status').each(function() {
+                const studentId = $(this).data('student-id');
+                const status = $(this).is(':checked');
+                draftData.reports.push({
+                    student: studentId,
+                    status: status
+                });
+            });
+            
+            localStorage.setItem('attendance_draft', JSON.stringify(draftData));
+        }, 2000); // Auto-save after 2 seconds of inactivity
+    });
+
+    // Load draft on page load
+    function loadDraft() {
+        const draft = localStorage.getItem('attendance_draft');
+        if (draft && !editMode) {
+            const draftData = JSON.parse(draft);
+            if (confirm('Found unsaved attendance data. Would you like to restore it?')) {
+                $('#attendanceSubject').val(draftData.subject);
+                $('#attendanceDate').val(draftData.date);
+                
+                if (draftData.subject && draftData.date) {
+                    $('#loadStudents').click();
+                    
+                    setTimeout(() => {
+                        draftData.reports.forEach(report => {
+                            $(`#student_${report.student}`).prop('checked', report.status).trigger('change');
+                        });
+                    }, 1500);
+                }
+            } else {
+                localStorage.removeItem('attendance_draft');
+            }
+        }
+    }
+
+    // Clear draft when attendance is successfully saved
+    function clearDraft() {
+        localStorage.removeItem('attendance_draft');
+    }
+
+    // Confirmation before leaving page with unsaved changes
+    let hasUnsavedChanges = false;
+    $(document).on('change', '.attendance-status', function() {
+        hasUnsavedChanges = true;
+    });
+
+    $(window).on('beforeunload', function(e) {
+        if (hasUnsavedChanges) {
+            const message = 'You have unsaved attendance changes. Are you sure you want to leave?';
+            e.returnValue = message;
+            return message;
+        }
+    });
+
+    // Remove unsaved changes flag when form is submitted
+    $('#attendanceForm').on('submit', function() {
+        hasUnsavedChanges = false;
+        clearDraft();
+    });
+
+    // Initialize
+    loadSubjects();
+    loadDraft();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% block title %}Staff{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Staff List</h3>
+        <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addStaffModal">Add Staff</button>
+    </div>
+    <div class="card-body">
+        <table id="staffTable" class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data will be loaded via AJAX -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Staff Modal -->
+<div class="modal fade" id="addStaffModal" tabindex="-1" aria-labelledby="addStaffModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form id="addStaffForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addStaffModalLabel">Add Staff</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="staffUsername" class="form-label">Username</label>
+              <input type="text" class="form-control" id="staffUsername" name="username" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="staffPassword" class="form-label">Password</label>
+              <input type="password" class="form-control" id="staffPassword" name="password" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="staffFirstName" class="form-label">First Name</label>
+              <input type="text" class="form-control" id="staffFirstName" name="first_name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="staffLastName" class="form-label">Last Name</label>
+              <input type="text" class="form-control" id="staffLastName" name="last_name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="staffEmail" class="form-label">Email</label>
+              <input type="email" class="form-control" id="staffEmail" name="email" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="staffAddress" class="form-label">Address</label>
+              <input type="text" class="form-control" id="staffAddress" name="address" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="staffGender" class="form-label">Gender</label>
+              <select class="form-control" id="staffGender" name="gender" required>
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="staffPhone" class="form-label">Phone</label>
+              <input type="text" class="form-control" id="staffPhone" name="phone" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Add</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Staff Modal -->
+<div class="modal fade" id="editStaffModal" tabindex="-1" aria-labelledby="editStaffModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form id="editStaffForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editStaffModalLabel">Edit Staff</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <input type="hidden" id="editStaffId">
+            <div class="col-md-6 mb-3">
+              <label for="editStaffFirstName" class="form-label">First Name</label>
+              <input type="text" class="form-control" id="editStaffFirstName" name="first_name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editStaffLastName" class="form-label">Last Name</label>
+              <input type="text" class="form-control" id="editStaffLastName" name="last_name" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editStaffAddress" class="form-label">Address</label>
+              <input type="text" class="form-control" id="editStaffAddress" name="address" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editStaffGender" class="form-label">Gender</label>
+              <select class="form-control" id="editStaffGender" name="gender" required>
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="editStaffPhone" class="form-label">Phone</label>
+              <input type="text" class="form-control" id="editStaffPhone" name="phone" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Update</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    // CSRF setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load staff
+    function loadStaff() {
+        $.get('/api-staff-profiles/', function(data) {
+            let rows = '';
+            data.forEach(staff => {
+                rows += `<tr>
+                    <td>${staff.full_name || staff.user_full_name}</td>
+                    <td>${staff.gender}</td>
+                    <td>${staff.phone_number}</td>
+                    <td>${staff.address}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info edit-staff" data-id="${staff.id}">Edit</button>
+                        <button class="btn btn-sm btn-danger delete-staff" data-id="${staff.id}">Delete</button>
+                    </td>
+                </tr>`;
+            });
+            if ($.fn.DataTable.isDataTable('#staffTable')) {
+                $('#staffTable').DataTable().destroy();
+            }
+            $('#staffTable tbody').html(rows);
+            $('#staffTable').DataTable();
+        }).fail(function(xhr) {
+            console.error('Failed to load staff:', xhr.responseText);
+            alert('Failed to load staff');
+        });
+    }
+    loadStaff();
+
+    // Add staff
+    $('#addStaffForm').submit(function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/api-staff-profiles/',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({
+                username: $('#staffUsername').val(),
+                password: $('#staffPassword').val(),
+                first_name: $('#staffFirstName').val(),
+                last_name: $('#staffLastName').val(),
+                email: $('#staffEmail').val(),
+                address: $('#staffAddress').val(),
+                gender: $('#staffGender').val(),
+                phone_number: $('#staffPhone').val()
+            }),
+            success: function() {
+                $('#addStaffModal').modal('hide');
+                $('#addStaffForm')[0].reset();
+                loadStaff();
+                alert('Staff added successfully!');
+            },
+            error: function(xhr) {
+                console.error('Add failed:', xhr.responseText);
+                alert('Failed to add staff: ' + (xhr.responseJSON?.detail || 'Unknown error'));
+            }
+        });
+    });
+
+    // Edit staff (show modal)
+    $(document).on('click', '.edit-staff', function() {
+        const id = $(this).data('id');
+        $.get(`/api-staff-profiles/${id}/`, function(staff) {
+            $('#editStaffForm').data('edit-id', id);
+            $('#editStaffFirstName').val(staff.first_name || '');
+            $('#editStaffLastName').val(staff.last_name || '');
+            $('#editStaffAddress').val(staff.address);
+            $('#editStaffGender').val(staff.gender);
+            $('#editStaffPhone').val(staff.phone_number);
+            $('#editStaffModal').modal('show');
+        }).fail(function(xhr) {
+            console.error('Failed to load staff details:', xhr.responseText);
+            alert('Failed to load staff details');
+        });
+    });
+
+    // Update staff
+    $('#editStaffForm').submit(function(e) {
+        e.preventDefault();
+        const editId = $(this).data('edit-id');
+
+        $.ajax({
+            url: `/api-staff-profiles/${editId}/`,
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({
+                first_name: $('#editStaffFirstName').val(),
+                last_name: $('#editStaffLastName').val(),
+                address: $('#editStaffAddress').val(),
+                gender: $('#editStaffGender').val(),
+                phone_number: $('#editStaffPhone').val(),
+            }),
+            success: function() {
+                $('#editStaffModal').modal('hide');
+                $('#editStaffForm')[0].reset();
+                loadStaff();
+                alert('Staff updated successfully!');
+            },
+            error: function(xhr) {
+                console.error('Update failed:', xhr.responseText);
+                alert('Failed to update staff: ' + (xhr.responseJSON?.detail || 'Unknown error'));
+            }
+        });
+    });
+
+    // Delete staff
+    $(document).on('click', '.delete-staff', function() {
+        const id = $(this).data('id');
+        if(confirm('Are you sure you want to delete this staff member?')) {
+            $.ajax({
+                url: `/api-staff-profiles/${id}/`,
+                method: 'DELETE',
+                success: function() {
+                    loadStaff();
+                    alert('Staff deleted successfully!');
+                },
+                error: function(xhr) {
+                    console.error('Delete failed:', xhr.responseText);
+                    alert('Failed to delete staff');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

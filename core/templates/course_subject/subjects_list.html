@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+{% block title %}Subjects{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Subjects List</h3>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addSubjectModal">Add Subject</button>
+    </div>
+    <div class="card-body">
+        <table id="subjectsTable" class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Course</th>
+                    <th>Staff</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data will be loaded via AJAX -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Subject Modal -->
+<div class="modal fade" id="addSubjectModal" tabindex="-1" aria-labelledby="addSubjectModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="addSubjectForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addSubjectModalLabel">Add Subject</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="subjectName" class="form-label">Subject Name</label>
+            <input type="text" class="form-control" id="subjectName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="subjectCourse" class="form-label">Course</label>
+            <select class="form-control" id="subjectCourse" name="course" required>
+              <option value="">Select a course</option>
+              <!-- Options loaded via AJAX -->
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="subjectStaff" class="form-label">Staff</label>
+            <select class="form-control" id="subjectStaff" name="staff" required>
+              <option value="">Select a staff member</option>
+              <!-- Options loaded via AJAX -->
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-danger">Add</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Subject Modal -->
+<div class="modal fade" id="editSubjectModal" tabindex="-1" aria-labelledby="editSubjectModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="editSubjectForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editSubjectModalLabel">Edit Subject</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editSubjectId">
+          <div class="mb-3">
+            <label for="editSubjectName" class="form-label">Subject Name</label>
+            <input type="text" class="form-control" id="editSubjectName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="editSubjectCourse" class="form-label">Course</label>
+            <select class="form-control" id="editSubjectCourse" name="course" required>
+              <option value="">Select a course</option>
+              <!-- Options loaded via AJAX -->
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="editSubjectStaff" class="form-label">Staff</label>
+            <select class="form-control" id="editSubjectStaff" name="staff" required>
+              <option value="">Select a staff member</option>
+              <!-- Options loaded via AJAX -->
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-danger">Update</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    console.log('Document ready - starting subjects list initialization');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Set up CSRF for AJAX
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load subjects via AJAX
+    function loadSubjects() {
+        console.log('Loading subjects...');
+        $.get('/api-subjects/')
+            .done(function(data) {
+                console.log('Subjects loaded:', data);
+                let rows = '';
+                data.forEach(subject => {
+                    rows += `<tr>
+                        <td>${subject.name}</td>
+                        <td>${subject.course_name || ''}</td>
+                        <td>${subject.staff_name || ''}</td>
+                        <td>${subject.created_at ? subject.created_at.substring(0,10) : ''}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info edit-subject" data-id="${subject.id}">Edit</button>
+                            <button class="btn btn-sm btn-danger delete-subject" data-id="${subject.id}">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+                
+                // Destroy existing DataTable if it exists
+                if ($.fn.DataTable.isDataTable('#subjectsTable')) {
+                    $('#subjectsTable').DataTable().destroy();
+                }
+                
+                // Update the table body
+                $('#subjectsTable tbody').html(rows);
+                
+                // Reinitialize DataTable
+                $('#subjectsTable').DataTable();
+                console.log('Subjects DataTable reinitialized');
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load subjects:', error);
+                console.error('Response:', xhr.responseText);
+                alert('Failed to load subjects. Check console for details.');
+            });
+    }
+
+    // Load courses for subject form
+    function loadCourses() {
+        console.log('Loading courses for dropdown...');
+        $.get('/api-courses/')
+            .done(function(data) {
+                console.log('Courses for dropdown loaded:', data);
+                let options = '<option value="">Select a course</option>';
+                data.forEach(course => {
+                    options += `<option value="${course.id}">${course.name}</option>`;
+                });
+                $('#subjectCourse, #editSubjectCourse').html(options);
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load courses for dropdown:', error);
+                console.error('Response:', xhr.responseText);
+            });
+    }
+
+    // Load staff for subject form
+    function loadStaff() {
+        console.log('Loading staff for dropdown...');
+        $.get('/api-staff-profiles/')
+            .done(function(data) {
+                console.log('Staff for dropdown loaded:', data);
+                let options = '<option value="">Select a staff member</option>';
+                data.forEach(staff => {
+                    options += `<option value="${staff.user}">${staff.user_full_name || staff.full_name}</option>`;
+                });
+                $('#subjectStaff, #editSubjectStaff').html(options);
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load staff for dropdown:', error);
+                console.error('Response:', xhr.responseText);
+            });
+    }
+
+    // Initial load
+    loadSubjects();
+    loadCourses();
+    loadStaff();
+
+    // Add subject via AJAX
+    $('#addSubjectForm').submit(function(e) {
+        e.preventDefault();
+        console.log('Adding subject...');
+        
+        const formData = {
+            name: $('#subjectName').val(),
+            course: $('#subjectCourse').val(),
+            staff: $('#subjectStaff').val()
+        };
+        console.log('Subject form data:', formData);
+
+        $.ajax({
+            url: '/api-subjects/',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            data: JSON.stringify(formData),
+            success: function(response) {
+                console.log('Subject added successfully:', response);
+                $('#addSubjectModal').modal('hide');
+                $('#addSubjectForm')[0].reset();
+                loadSubjects();
+                alert('Subject added successfully!');
+            },
+            error: function(xhr, status, error) {
+                console.error('Add subject failed:', error);
+                console.error('Response:', xhr.responseText);
+                let errorMsg = 'Failed to add subject.';
+                if (xhr.responseJSON && xhr.responseJSON.non_field_errors) {
+                    errorMsg = xhr.responseJSON.non_field_errors[0];
+                }
+                alert(errorMsg);
+            }
+        });
+    });
+
+    // Edit subject (show modal)
+    $(document).on('click', '.edit-subject', function() {
+        const id = $(this).data('id');
+        console.log('Editing subject with ID:', id);
+        
+        $.get(`/api-subjects/${id}/`, function(subject) {
+            $('#editSubjectForm').data('edit-id', id);
+            $('#editSubjectName').val(subject.name);
+            $('#editSubjectCourse').val(subject.course);
+            $('#editSubjectStaff').val(subject.staff);
+            $('#editSubjectModal').modal('show');
+        }).fail(function(xhr) {
+            console.error('Failed to load subject details:', xhr.responseText);
+            alert('Failed to load subject details');
+        });
+    });
+
+    // Update subject
+    $('#editSubjectForm').submit(function(e) {
+        e.preventDefault();
+        const editId = $(this).data('edit-id');
+        console.log('Updating subject with ID:', editId);
+
+        const formData = {
+            name: $('#editSubjectName').val(),
+            course: $('#editSubjectCourse').val(),
+            staff: $('#editSubjectStaff').val()
+        };
+
+        $.ajax({
+            url: `/api-subjects/${editId}/`,
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            data: JSON.stringify(formData),
+            success: function(response) {
+                console.log('Subject updated successfully:', response);
+                $('#editSubjectModal').modal('hide');
+                $('#editSubjectForm')[0].reset();
+                loadSubjects();
+                alert('Subject updated successfully!');
+            },
+            error: function(xhr, status, error) {
+                console.error('Update subject failed:', error);
+                console.error('Response:', xhr.responseText);
+                let errorMsg = 'Failed to update subject.';
+                if (xhr.responseJSON && xhr.responseJSON.non_field_errors) {
+                    errorMsg = xhr.responseJSON.non_field_errors[0];
+                }
+                alert(errorMsg);
+            }
+        });
+    });
+
+    // Delete subject via AJAX
+    $(document).on('click', '.delete-subject', function() {
+        const id = $(this).data('id');
+        console.log('Deleting subject with ID:', id);
+        
+        if(confirm('Are you sure you want to delete this subject?')) {
+            $.ajax({
+                url: `/api-subjects/${id}/`,
+                method: 'DELETE',
+                success: function(response) {
+                    console.log('Subject deleted successfully:', response);
+                    loadSubjects();
+                    alert('Subject deleted successfully!');
+                },
+                error: function(xhr, status, error) {
+                    console.error('Delete subject failed:', error);
+                    console.error('Response:', xhr.responseText);
+                    alert('Failed to delete subject. Check console for details.');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

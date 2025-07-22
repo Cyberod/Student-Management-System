@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% block title %}Courses{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Courses List</h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCourseModal">Add Course</button>
+    </div>
+    <div class="card-body">
+        <table id="coursesTable" class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Created At</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Data will be loaded via AJAX -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Add Course Modal -->
+<div class="modal fade" id="addCourseModal" tabindex="-1" aria-labelledby="addCourseModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="addCourseForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addCourseModalLabel">Add Course</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="courseName" class="form-label">Course Name</label>
+            <input type="text" class="form-control" id="courseName" name="name" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Course Modal -->
+<div class="modal fade" id="editCourseModal" tabindex="-1" aria-labelledby="editCourseModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="editCourseForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editCourseModalLabel">Edit Course</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="editCourseName" class="form-label">Course Name</label>
+            <input type="text" class="form-control" id="editCourseName" name="name" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Update</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    console.log('Document ready - starting course list initialization');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Set up CSRF for AJAX
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+            }
+        }
+    });
+
+    // Load courses via AJAX
+    function loadCourses() {
+        console.log('Loading courses...');
+        $.get('/api-courses/')
+            .done(function(data) {
+                console.log('Courses loaded:', data);
+                let rows = '';
+                data.forEach(course => {
+                    rows += `<tr>
+                        <td>${course.name}</td>
+                        <td>${course.created_at ? course.created_at.substring(0,10) : ''}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info edit-course" data-id="${course.id}" data-name="${course.name}">Edit</button>
+                            <button class="btn btn-sm btn-danger delete-course" data-id="${course.id}">Delete</button>
+                        </td>
+                    </tr>`;
+                });
+                
+                // Destroy existing DataTable if it exists
+                if ($.fn.DataTable.isDataTable('#coursesTable')) {
+                    $('#coursesTable').DataTable().destroy();
+                }
+                
+                // Update the table body
+                $('#coursesTable tbody').html(rows);
+                
+                // Reinitialize DataTable
+                $('#coursesTable').DataTable();
+                console.log('DataTable reinitialized');
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load courses:', error);
+                console.error('Response:', xhr.responseText);
+                alert('Failed to load courses. Check console for details.');
+            });
+    }
+
+    // Initial load
+    loadCourses();
+
+    // Add course via AJAX
+    $('#addCourseForm').submit(function(e) {
+        e.preventDefault();
+        console.log('Adding course...');
+        $.ajax({
+            url: '/api-courses/',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            data: JSON.stringify({ 
+                name: $('#courseName').val() 
+            }),
+            success: function(response) {
+                console.log('Course added successfully:', response);
+                $('#addCourseModal').modal('hide');
+                $('#addCourseForm')[0].reset();
+                loadCourses();
+            },
+            error: function(xhr, status, error) {
+                console.error('Add failed:', error);
+                console.error('Response:', xhr.responseText);
+                alert('Failed to add course. Check console for details.');
+            }
+        });
+    });
+
+    // Delete course via AJAX
+    $(document).on('click', '.delete-course', function() {
+        const id = $(this).data('id');
+        console.log('Deleting course with ID:', id);
+        
+        if(confirm('Are you sure you want to delete this course?')) {
+            $.ajax({
+                url: `/api-courses/${id}/`,
+                method: 'DELETE',
+                success: function(response) {
+                    console.log('Course deleted successfully:', response);
+                    loadCourses();
+                },
+                error: function(xhr, status, error) {
+                    console.error('Delete failed:', error);
+                    console.error('Response:', xhr.responseText);
+                    alert('Failed to delete course. Check console for details.');
+                }
+            });
+        }
+    });
+
+    $(document).on('click', '.edit-course', function() {
+    const id = $(this).data('id');
+    const name = $(this).data('name');
+    $('#editCourseName').val(name);
+    $('#editCourseModal').modal('show');
+    $('#editCourseForm').data('edit-id', id);
+    });
+
+    $('#editCourseForm').submit(function(e) {
+        e.preventDefault();
+        const id = $(this).data('edit-id');
+        $.ajax({
+            url: `/api-courses/${id}/`,
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            data: JSON.stringify({ name: $('#editCourseName').val() }),
+            success: function(response) {
+                $('#editCourseModal').modal('hide');
+                $('#editCourseForm')[0].reset();
+                loadCourses();
+            },
+            error: function(xhr, status, error) {
+                alert('Failed to update course.');
+            }
+    });
+});
+
+$('#editCourseModal').on('hidden.bs.modal', function () {
+    $('#editCourseForm')[0].reset();
+    $('#editCourseForm').removeData('edit-id');
+});
+});
+</script>
+{% endblock %}

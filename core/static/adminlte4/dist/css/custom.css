@@ -1,0 +1,48 @@
+/* Custom styles for Student Management System */
+.content-wrapper {
+    margin-left: 250px;
+}
+
+.main-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+}
+
+.main-header {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 250px;
+    z-index: 1030;
+}
+
+.main-footer {
+    margin-left: 250px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+    .content-wrapper,
+    .main-footer {
+        margin-left: 0;
+    }
+    
+    .main-header {
+        left: 0;
+    }
+}
+
+/* Small box hover effects */
+.small-box:hover {
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+
+/* Card styling */
+.card {
+    box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+    margin-bottom: 1rem;
+}
