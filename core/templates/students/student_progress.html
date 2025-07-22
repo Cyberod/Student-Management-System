@@ -1,0 +1,754 @@
+{% extends 'base.html' %}
+
+{% block title %}Academic Progress{% endblock %}
+{% block page_title %}Academic Progress{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active">Academic Progress</li>
+{% endblock %}
+
+{% block content %}
+<!-- Progress Overview Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="card bg-gradient-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-1" id="overallGPA">3.2</h3>
+                        <p class="mb-0">Overall GPA</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card bg-gradient-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-1" id="completedCredits">45</h3>
+                        <p class="mb-0">Credits Earned</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-graduation-cap fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card bg-gradient-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-1" id="attendanceRate">82%</h3>
+                        <p class="mb-0">Attendance Rate</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-calendar-check fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card bg-gradient-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3 class="mb-1" id="currentSemester">{{ student_profile.session_year.start_year }}</h3>
+                        <p class="mb-0">Current Year</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-calendar-alt fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Charts -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-area text-primary mr-2"></i>
+                    Academic Performance Trend
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="performanceTrendChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie text-success mr-2"></i>
+                    Grade Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="gradeDistributionChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Subject Performance -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-book text-info mr-2"></i>
+                    Subject Performance
+                </h5>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="filterByGrade('all')">All</button>
+                    <button type="button" class="btn btn-sm btn-outline-success" onclick="filterByGrade('good')">Good</button>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="filterByGrade('average')">Average</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="filterByGrade('poor')">Poor</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="subjectPerformanceTable">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Lecturer</th>
+                                <th>Credits</th>
+                                <th>Attendance</th>
+                                <th>Current Grade</th>
+                                <th>Score</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for subject in subjects %}
+                            <tr data-grade-category="good">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-book text-primary mr-2"></i>
+                                        <div>
+                                            <strong>{{ subject.name }}</strong><br>
+                                            <small class="text-muted">{{ subject.course.name }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ subject.staff.get_full_name }}</td>
+                                <td>3</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-success" style="width: 85%" data-subject-attendance="{{ subject.id }}">85%</div>
+                                    </div>
+                                </td>
+                                <td><span class="badge bg-success grade-badge" data-subject-grade="{{ subject.id }}">B+</span></td>
+                                <td><span class="fw-bold score-text" data-subject-score="{{ subject.id }}">78.5</span></td>
+                                <td><span class="badge bg-success">On Track</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewSubjectDetails({{ subject.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Academic Goals -->
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-target text-warning mr-2"></i>
+                    Academic Goals
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="goal-item mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Maintain GPA above 3.5</span>
+                        <span class="text-warning">91%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning" style="width: 91%"></div>
+                    </div>
+                    <small class="text-muted">Current: 3.2 | Target: 3.5</small>
+                </div>
+                
+                <div class="goal-item mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Achieve 90% Attendance</span>
+                        <span class="text-info">91%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-info" style="width: 91%"></div>
+                    </div>
+                    <small class="text-muted">Current: 82% | Target: 90%</small>
+                </div>
+                
+                <div class="goal-item mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Complete 60 Credits</span>
+                        <span class="text-success">75%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: 75%"></div>
+                    </div>
+                    <small class="text-muted">Current: 45 | Target: 60</small>
+                </div>
+                
+                <div class="goal-item">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>No Failed Subjects</span>
+                        <span class="text-success">100%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" style="width: 100%"></div>
+                    </div>
+                    <small class="text-muted">Failed: 0 | Total: 8</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle text-danger mr-2"></i>
+                    Areas for Improvement
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <h6><i class="fas fa-calendar-times mr-2"></i>Attendance</h6>
+                    <p class="mb-1">Your attendance is below the required 85% threshold.</p>
+                    <small class="text-muted">Current: 82% | Required: 85%</small>
+                </div>
+                
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-chart-line mr-2"></i>Mathematics</h6>
+                    <p class="mb-1">Performance has declined in recent assessments.</p>
+                    <small class="text-muted">Last 3 scores: 65%, 70%, 68%</small>
+                </div>
+                
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-thumbs-up mr-2"></i>English Literature</h6>
+                    <p class="mb-1">Excellent improvement shown this semester.</p>
+                    <small class="text-muted">Grade improved from C+ to B+</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history text-secondary mr-2"></i>
+                    Recent Academic Activities
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6 class="timeline-title">Assignment Submitted</h6>
+                            <p class="timeline-text">Mathematics Assignment 3 submitted successfully</p>
+                            <small class="text-muted">2 hours ago</small>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-info"></div>
+                        <div class="timeline-content">
+                            <h6 class="timeline-title">Quiz Completed</h6>
+                            <p class="timeline-text">English Literature Quiz 2 - Score: 85%</p>
+                            <small class="text-muted">1 day ago</small>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-warning"></div>
+                        <div class="timeline-content">
+                            <h6 class="timeline-title">Attendance Marked</h6>
+                            <p class="timeline-text">Present in Physics class</p>
+                            <small class="text-muted">2 days ago</small>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6 class="timeline-title">Grade Updated</h6>
+                            <p class="timeline-text">Chemistry mid-term result published - Grade: B+</p>
+                            <small class="text-muted">3 days ago</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Semester Progress -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-week text-primary mr-2"></i>
+                    Semester Progress
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="semester-progress mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold">Semester Progress</span>
+                                <span class="text-primary">Week 8 of 16</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 25px;">
+                                <div class="progress-bar bg-primary" style="width: 50%">50%</div>
+                            </div>
+                            <div class="d-flex justify-content-between text-muted">
+                                <small>Start: Jan 15, 2024</small>
+                                <small>End: May 15, 2024</small>
+                            </div>
+                        </div>
+                        
+                        <div class="upcoming-events">
+                            <h6>Upcoming Events</h6>
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>Mathematics Quiz 3</strong>
+                                        <br><small class="text-muted">Chapter 5-6 Coverage</small>
+                                    </div>
+                                    <span class="badge bg-warning">Tomorrow</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>Physics Assignment Due</strong>
+                                        <br><small class="text-muted">Lab Report Submission</small>
+                                    </div>
+                                    <span class="badge bg-danger">3 days</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>Chemistry Mid-term</strong>
+                                        <br><small class="text-muted">Chapters 1-8</small>
+                                    </div>
+                                    <span class="badge bg-info">1 week</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="academic-calendar">
+                            <h6>Academic Calendar</h6>
+                            <div class="calendar-widget">
+                                <div class="calendar-header text-center mb-2">
+                                    <strong>January 2024</strong>
+                                </div>
+                                <div class="calendar-grid">
+                                    <div class="calendar-days">
+                                        <div class="day-header">S</div>
+                                        <div class="day-header">M</div>
+                                        <div class="day-header">T</div>
+                                        <div class="day-header">W</div>
+                                        <div class="day-header">T</div>
+                                        <div class="day-header">F</div>
+                                        <div class="day-header">S</div>
+                                    </div>
+                                    <div class="calendar-dates">
+                                        <div class="date"></div>
+                                        <div class="date">1</div>
+                                        <div class="date">2</div>
+                                        <div class="date">3</div>
+                                        <div class="date">4</div>
+                                        <div class="date">5</div>
+                                        <div class="date">6</div>
+                                        <div class="date">7</div>
+                                        <div class="date">8</div>
+                                        <div class="date">9</div>
+                                        <div class="date">10</div>
+                                        <div class="date">11</div>
+                                        <div class="date">12</div>
+                                        <div class="date">13</div>
+                                        <div class="date">14</div>
+                                        <div class="date">15</div>
+                                        <div class="date">16</div>
+                                        <div class="date">17</div>
+                                        <div class="date">18</div>
+                                        <div class="date today">19</div>
+                                        <div class="date event">20</div>
+                                        <div class="date">21</div>
+                                        <div class="date">22</div>
+                                        <div class="date event">23</div>
+                                        <div class="date">24</div>
+                                        <div class="date">25</div>
+                                        <div class="date">26</div>
+                                        <div class="date">27</div>
+                                        <div class="date">28</div>
+                                        <div class="date">29</div>
+                                        <div class="date">30</div>
+                                        <div class="date">31</div>
+                                    </div>
+                                </div>
+                                <div class="calendar-legend mt-2">
+                                    <small>
+                                        <span class="badge bg-primary me-1">Today</span>
+                                        <span class="badge bg-warning">Events</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -22px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #dee2e6;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 3px solid #007bff;
+}
+
+.timeline-title {
+    margin-bottom: 5px;
+    color: #495057;
+}
+
+.timeline-text {
+    margin-bottom: 5px;
+    color: #6c757d;
+}
+
+.goal-item {
+    padding: 10px 0;
+}
+
+.calendar-widget {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.calendar-grid {
+    display: grid;
+    gap: 5px;
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.day-header {
+    text-align: center;
+    font-weight: bold;
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.calendar-dates {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.date {
+    text-align: center;
+    padding: 8px 4px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.date:hover {
+    background: #e9ecef;
+}
+
+.date.today {
+    background: #007bff;
+    color: white;
+    font-weight: bold;
+}
+
+.date.event {
+    background: #ffc107;
+    color: #212529;
+    font-weight: bold;
+}
+
+.progress {
+    height: 8px;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(45deg, #28a745, #1e7e34);
+}
+
+.bg-gradient-info {
+    background: linear-gradient(45deg, #17a2b8, #117a8b);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(45deg, #ffc107, #d39e00);
+}
+
+.opacity-75 {
+    opacity: 0.75;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    initializeCharts();
+    loadProgressData();
+});
+
+function initializeCharts() {
+    // Performance Trend Chart
+    const trendCtx = document.getElementById('performanceTrendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6', 'Week 7', 'Week 8'],
+            datasets: [{
+                label: 'GPA',
+                data: [2.8, 3.0, 3.1, 2.9, 3.2, 3.3, 3.1, 3.2],
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Attendance %',
+                data: [85, 88, 82, 79, 84, 86, 81, 82],
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 4.0
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+
+    // Grade Distribution Chart
+    const gradeCtx = document.getElementById('gradeDistributionChart').getContext('2d');
+    new Chart(gradeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['A', 'B+', 'B', 'C+', 'C'],
+            datasets: [{
+                data: [2, 3, 2, 1, 0],
+                backgroundColor: [
+                    '#28a745',
+                    '#20c997',
+                    '#17a2b8',
+                    '#ffc107',
+                    '#dc3545'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function loadProgressData() {
+    // Simulate loading real data
+    setTimeout(() => {
+        updateSubjectPerformance();
+    }, 1000);
+}
+
+function updateSubjectPerformance() {
+    // Simulate subject performance data
+    const subjects = [
+        { id: 1, attendance: 85, grade: 'B+', score: 78.5, category: 'good' },
+        { id: 2, attendance: 92, grade: 'A', score: 88.2, category: 'good' },
+        { id: 3, attendance: 78, grade: 'B', score: 72.1, category: 'average' },
+        { id: 4, attendance: 65, grade: 'C+', score: 65.8, category: 'poor' }
+    ];
+
+    subjects.forEach(subject => {
+        // Update attendance progress bar
+        const attendanceBar = $(`[data-subject-attendance="${subject.id}"]`);
+        if (attendanceBar.length) {
+            attendanceBar.css('width', subject.attendance + '%').text(subject.attendance + '%');
+            
+            // Update color based on attendance
+            attendanceBar.removeClass('bg-success bg-warning bg-danger');
+            if (subject.attendance >= 85) {
+                attendanceBar.addClass('bg-success');
+            } else if (subject.attendance >= 75) {
+                attendanceBar.addClass('bg-warning');
+            } else {
+                attendanceBar.addClass('bg-danger');
+            }
+        }
+
+        // Update grade badge
+        const gradeBadge = $(`[data-subject-grade="${subject.id}"]`);
+        if (gradeBadge.length) {
+            gradeBadge.text(subject.grade);
+            gradeBadge.removeClass('bg-success bg-warning bg-danger bg-info');
+            
+            if (subject.grade.startsWith('A')) {
+                gradeBadge.addClass('bg-success');
+            } else if (subject.grade.startsWith('B')) {
+                gradeBadge.addClass('bg-info');
+            } else if (subject.grade.startsWith('C')) {
+                gradeBadge.addClass('bg-warning');
+            } else {
+                gradeBadge.addClass('bg-danger');
+            }
+        }
+
+        // Update score
+        const scoreText = $(`[data-subject-score="${subject.id}"]`);
+        if (scoreText.length) {
+            scoreText.text(subject.score);
+        }
+
+        // Update row category for filtering
+        const row = gradeBadge.closest('tr');
+        if (row.length) {
+            row.attr('data-grade-category', subject.category);
+        }
+    });
+}
+
+function filterByGrade(category) {
+    const rows = $('#subjectPerformanceTable tbody tr');
+    
+    // Update active button
+    $('.btn-group .btn').removeClass('active');
+    $(`button[onclick="filterByGrade('${category}')"]`).addClass('active');
+    
+    if (category === 'all') {
+        rows.show();
+    } else {
+        rows.hide();
+        rows.filter(`[data-grade-category="${category}"]`).show();
+    }
+}
+
+function viewSubjectDetails(subjectId) {
+    // This would typically open a modal or navigate to subject details
+    alert('Viewing details for subject ID: ' + subjectId);
+}
+
+// Auto-refresh data every 5 minutes
+setInterval(loadProgressData, 300000);
+
+// Initialize tooltips
+$('[data-bs-toggle="tooltip"]').tooltip();
+</script>
+{% endblock %}
+
+

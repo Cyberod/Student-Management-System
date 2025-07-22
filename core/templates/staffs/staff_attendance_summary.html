@@ -1,0 +1,623 @@
+{% extends 'base.html' %}
+
+{% block title %}Attendance Summary{% endblock %}
+{% block page_title %}My Attendance Summary{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active">Attendance Summary</li>
+{% endblock %}
+
+{% block content %}
+<!-- Summary Statistics -->
+<div class="row">
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h3>{{ total_classes }}</h3>
+                <p>Classes Conducted</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-calendar-alt"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+            <div class="inner">
+                <h3>{{ present_records }}</h3>
+                <p>Total Present</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-user-check"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+            <div class="inner">
+                <h3>{{ overall_attendance_percentage }}%</h3>
+                <p>Overall Attendance</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-percentage"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+            <div class="inner">
+                <h3>{{ assigned_subjects_count }}</h3>
+                <p>My Subjects</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-book"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Subject-wise Attendance Summary -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    Subject-wise Attendance Summary
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="subjectSummaryTable" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Course</th>
+                                <th>Classes Taken</th>
+                                <th>Total Records</th>
+                                <th>Present</th>
+                                <th>Absent</th>
+                                <th>Attendance %</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for summary in subject_summaries %}
+                            <tr>
+                                <td>
+                                    <strong>{{ summary.subject.name }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ summary.subject.course.name }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ summary.classes_taken }}</span>
+                                </td>
+                                <td>{{ summary.total_records }}</td>
+                                <td>
+                                    <span class="badge bg-success">{{ summary.present_records }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-danger">{{ summary.total_records|add:"-"|add:summary.present_records }}</span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar {% if summary.attendance_percentage >= 75 %}bg-success{% elif summary.attendance_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                             style="width: {{ summary.attendance_percentage }}%">
+                                            {{ summary.attendance_percentage }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'take_attendance' %}?subject={{ summary.subject.id }}" class="btn btn-primary">
+                                            <i class="fas fa-plus"></i>
+                                        </a>
+                                        <a href="{% url 'attendance_list' %}?subject={{ summary.subject.id }}" class="btn btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-success" onclick="viewSubjectDetails({{ summary.subject.id }})">
+                                            <i class="fas fa-chart-line"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center">
+                                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                    <h5>No Attendance Records</h5>
+                                    <p class="text-muted">You haven't taken any attendance yet.</p>
+                                    <a href="{% url 'take_attendance' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Take First Attendance
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-history mr-2"></i>
+                    Recent Attendance Activities
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for activity in recent_activities %}
+                    <div class="time-label">
+                        <span class="bg-blue">{{ activity.date }}</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-calendar-check bg-green"></i>
+                        <div class="timeline-item">
+                            <span class="time">
+                                <i class="fas fa-clock"></i> {{ activity.date }}
+                            </span>
+                            <h3 class="timeline-header">
+                                Attendance taken for {{ activity.subject.name }}
+                            </h3>
+                            <div class="timeline-body">
+                                Course: {{ activity.subject.course.name }}<br>
+                                Students: {{ activity.reports.count }} records
+                            </div>
+                            <div class="timeline-footer">
+                                <a href="{% url 'attendance_list' %}?subject={{ activity.subject.id }}" class="btn btn-sm btn-primary">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center">
+                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                        <h5>No Recent Activities</h5>
+                        <p class="text-muted">Start taking attendance to see activities here.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-pie mr-2"></i>
+                    Attendance Overview
+                </h3>
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceOverviewChart" style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-tasks mr-2"></i>
+                    Quick Actions
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'take_attendance' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Take Attendance
+                    </a>
+                    <a href="{% url 'attendance_list' %}" class="btn btn-info">
+                        <i class="fas fa-list"></i> View All Records
+                    </a>
+                    <a href="{% url 'attendance_reports' %}" class="btn btn-success">
+                        <i class="fas fa-chart-bar"></i> Generate Reports
+                    </a>
+                    <button type="button" class="btn btn-warning" onclick="exportSummary()">
+                        <i class="fas fa-download"></i> Export Summary
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Subject Details Modal -->
+<div class="modal fade" id="subjectDetailsModal" tabindex="-1" aria-labelledby="subjectDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="subjectDetailsModalLabel">Subject Attendance Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="subjectDetailsContent">
+                    <!-- Subject details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#subjectSummaryTable').DataTable({
+        responsive: true,
+        autoWidth: false,
+        pageLength: 10,
+        order: [[6, 'desc']] // Sort by attendance percentage
+    });
+    
+    // Initialize Attendance Overview Chart
+    initializeAttendanceChart();
+});
+
+function initializeAttendanceChart() {
+    const ctx = document.getElementById('attendanceOverviewChart').getContext('2d');
+    
+    const presentRecords = {{ present_records }};
+    const totalRecords = {{ total_student_records }};
+    const absentRecords = totalRecords - presentRecords;
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Present', 'Absent'],
+            datasets: [{
+                data: [presentRecords, absentRecords],
+                backgroundColor: [
+                    '#28a745',
+                    '#dc3545'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const percentage = ((context.parsed / totalRecords) * 100).toFixed(1);
+                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function viewSubjectDetails(subjectId) {
+    // Show loading
+    document.getElementById('subjectDetailsContent').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading subject details...</p>
+        </div>
+    `;
+    
+    // Subject data from Django
+    const subjectSummaries = [
+        {% for summary in subject_summaries %}
+        {
+            id: {{ summary.subject.id }},
+            name: "{{ summary.subject.name }}",
+            course: "{{ summary.subject.course.name }}",
+            classes_taken: {{ summary.classes_taken }},
+            total_records: {{ summary.total_records }},
+            present_records: {{ summary.present_records }},
+            attendance_percentage: {{ summary.attendance_percentage }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const subject = subjectSummaries.find(s => s.id === subjectId);
+    
+    if (subject) {
+        setTimeout(() => {
+            const absentRecords = subject.total_records - subject.present_records;
+            
+            const detailsHtml = `
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <h4>${subject.name}</h4>
+                        <p class="text-muted">Course: ${subject.course}</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="btn-group">
+                            <a href="/attendance/take/?subject=${subject.id}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Take Attendance
+                            </a>
+                            <a href="/attendance/?subject=${subject.id}" class="btn btn-info">
+                                <i class="fas fa-list"></i> View Records
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="info-box bg-info">
+                            <span class="info-box-icon"><i class="fas fa-calendar-alt"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Classes Taken</span>
+                                <span class="info-box-number">${subject.classes_taken}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-success">
+                            <span class="info-box-icon"><i class="fas fa-user-check"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Present</span>
+                                <span class="info-box-number">${subject.present_records}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-danger">
+                            <span class="info-box-icon"><i class="fas fa-user-times"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Absent</span>
+                                <span class="info-box-number">${absentRecords}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="info-box bg-warning">
+                            <span class="info-box-icon"><i class="fas fa-percentage"></i></span>
+                            <div class="info-box-content">
+                                <span class="info-box-text">Attendance</span>
+                                <span class="info-box-number">${subject.attendance_percentage}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title">Attendance Trend</h5>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="subjectTrendChart" style="height: 200px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title">Student Performance</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="progress-group">
+                                    Excellent (90%+)
+                                    <span class="float-right"><b>5</b>/20</span>
+                                    <div class="progress progress-sm">
+                                        <div class="progress-bar bg-success" style="width: 25%"></div>
+                                    </div>
+                                </div>
+                                <div class="progress-group">
+                                    Good (75-89%)
+                                    <span class="float-right"><b>8</b>/20</span>
+                                    <div class="progress progress-sm">
+                                        <div class="progress-bar bg-info" style="width: 40%"></div>
+                                    </div>
+                                </div>
+                                <div class="progress-group">
+                                    Average (60-74%)
+                                    <span class="float-right"><b>4</b>/20</span>
+                                    <div class="progress progress-sm">
+                                        <div class="progress-bar bg-warning" style="width: 20%"></div>
+                                    </div>
+                                </div>
+                                <div class="progress-group">
+                                    Poor (Below 60%)
+                                    <span class="float-right"><b>3</b>/20</span>
+                                    <div class="progress progress-sm">
+                                        <div class="progress-bar bg-danger" style="width: 15%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title">Recent Classes</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Students</th>
+                                                <th>Present</th>
+                                                <th>Absent</th>
+                                                <th>Percentage</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>2024-01-15</td>
+                                                <td>25</td>
+                                                <td><span class="badge bg-success">22</span></td>
+                                                <td><span class="badge bg-danger">3</span></td>
+                                                <td>88%</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>2024-01-14</td>
+                                                <td>25</td>
+                                                <td><span class="badge bg-success">20</span></td>
+                                                <td><span class="badge bg-danger">5</span></td>
+                                                <td>80%</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>2024-01-13</td>
+                                                <td>25</td>
+                                                <td><span class="badge bg-success">24</span></td>
+                                                <td><span class="badge bg-danger">1</span></td>
+                                                <td>96%</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('subjectDetailsContent').innerHTML = detailsHtml;
+            
+            // Initialize trend chart
+            setTimeout(() => {
+                const trendCtx = document.getElementById('subjectTrendChart').getContext('2d');
+                new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan 13', 'Jan 14', 'Jan 15'],
+                        datasets: [{
+                            label: 'Attendance %',
+                            data: [96, 80, 88],
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }, 100);
+            
+        }, 1000);
+    }
+    
+    $('#subjectDetailsModal').modal('show');
+}
+
+function refreshData() {
+    // Show loading state
+    const refreshBtn = document.querySelector('[onclick="refreshData()"]');
+    const originalHtml = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+    refreshBtn.disabled = true;
+    
+    // Simulate refresh (in real app, make AJAX call)
+    setTimeout(() => {
+        location.reload();
+    }, 1500);
+}
+
+function exportSummary() {
+    // Create CSV content
+    let csvContent = "Subject,Course,Classes Taken,Total Records,Present,Absent,Attendance %\n";
+    
+    const subjectSummaries = [
+        {% for summary in subject_summaries %}
+        {
+            name: "{{ summary.subject.name }}",
+            course: "{{ summary.subject.course.name }}",
+            classes_taken: {{ summary.classes_taken }},
+            total_records: {{ summary.total_records }},
+            present_records: {{ summary.present_records }},
+            attendance_percentage: {{ summary.attendance_percentage }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    subjectSummaries.forEach(subject => {
+        const absentRecords = subject.total_records - subject.present_records;
+        csvContent += `"${subject.name}","${subject.course}",${subject.classes_taken},${subject.total_records},${subject.present_records},${absentRecords},${subject.attendance_percentage}%\n`;
+    });
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "attendance_summary.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Auto-refresh every 5 minutes
+setInterval(function() {
+    console.log('Auto-refreshing attendance data...');
+    // You can implement silent refresh here
+}, 300000);
+</script>
+{% endblock %}
+

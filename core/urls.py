@@ -18,7 +18,8 @@ from .views import (
     FeedbackCreateView, FeedbackListView, FeedbackReplyView,
     analytics_overview, attendance_analytics, result_analytics,
     export_attendance_csv, export_results_csv, export_attendance_pdf,
-    login_view, logout_view,take_attendance_view, attendance_list_view, attendance_reports_view,
+    login_view, logout_view,take_attendance_view, attendance_list_view, 
+    attendance_reports_view, student_progress_view, student_results_view,
 )
 
 urlpatterns = [
@@ -43,6 +44,9 @@ urlpatterns = [
 
     path('api-student-profiles/', StudentProfileListCreateView.as_view(), name='student-profile-list-create'),
     path('api-student-profiles/<int:pk>/', StudentProfileDetailView.as_view(), name='student-profile-detail'),
+    # Student Progress and Results
+    path('student/progress/', student_progress_view, name='student_progress'),
+    path('student/results/', student_results_view, name='student_results'),
 
 
 
@@ -87,7 +91,13 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
 
     path('students/', views.students_list, name='students_list'),
+
     path('staff/', views.staff_list, name='staff_list'), 
+    path('staff/subjects/', views.staff_subjects, name='staff_subjects'),
+    path('staff/students/', views.staff_students, name='staff_students'),
+    path('staff/attendance-summary/', views.staff_attendance_summary, name='staff_attendance_summary'),
+    # Staff API endpoint
+    path('api/staff/dashboard/', views.StaffDashboardAPIView.as_view(), name='staff_dashboard_api'),
 
     path('courses/', views.courses_list, name='courses_list'),
     path('subjects/', views.subjects_list, name='subjects_list'),

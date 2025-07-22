@@ -1,0 +1,409 @@
+{% extends 'base.html' %}
+
+{% block title %}My Students{% endblock %}
+{% block page_title %}My Students{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+<li class="breadcrumb-item active">My Students</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Summary Card -->
+    <div class="col-lg-4 col-12">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h3>{{ total_students }}</h3>
+                <p>Total Students</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-12">
+        <div class="small-box bg-success">
+            <div class="inner">
+                <h3>{{ assigned_subjects.count }}</h3>
+                <p>My Subjects</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-book"></i>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-12">
+        <div class="small-box bg-warning">
+            <div class="inner">
+                <h3>{{ students_by_course|length }}</h3>
+                <p>Courses</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Students by Course -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-users mr-2"></i>
+                    Students in My Courses
+                </h3>
+                <div class="card-tools">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-filter"></i> Filter by Course
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="filterByCourse('all')">All Courses</a></li>
+                            {% for course_name in students_by_course.keys %}
+                            <li><a class="dropdown-item" href="#" onclick="filterByCourse('{{ course_name }}')">{{ course_name }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table id="studentsTable" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Student Name</th>
+                                <th>Course</th>
+                                <th>Session</th>
+                                <th>Phone</th>
+                                <th>Attendance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student_data in students_with_attendance %}
+                            <tr data-course="{{ student_data.student.course.name }}">
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img src="https://via.placeholder.com/40x40/1f2937/ffffff?text={{ student_data.student.user.first_name|first|upper }}{{ student_data.student.user.last_name|first|upper }}" 
+                                             class="img-circle me-2" alt="Student">
+                                        <div>
+                                            <strong>{{ student_data.student.user.get_full_name }}</strong><br>
+                                            <small class="text-muted">{{ student_data.student.user.email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ student_data.student.course.name }}</span>
+                                </td>
+                                <td>
+                                    {% if student_data.student.session_year %}
+                                        {{ student_data.student.session_year.start_year }} - {{ student_data.student.session_year.end_year }}
+                                    {% else %}
+                                        <span class="text-muted">Not assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ student_data.student.phone_number|default:"N/A" }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar {% if student_data.attendance_percentage >= 75 %}bg-success{% elif student_data.attendance_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                             style="width: {{ student_data.attendance_percentage }}%">
+                                            {{ student_data.attendance_percentage }}%
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">{{ student_data.present_classes }}/{{ student_data.total_classes }} classes</small>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-info" onclick="viewStudentDetails({{ student_data.student.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-primary" onclick="viewAttendanceHistory({{ student_data.student.id }})">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                    <h5>No Students Found</h5>
+                                    <p class="text-muted">No students are enrolled in your courses yet.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Details Modal -->
+<div class="modal fade" id="studentDetailsModal" tabindex="-1" aria-labelledby="studentDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="studentDetailsModalLabel">Student Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="studentDetailsContent">
+                    <!-- Student details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance History Modal -->
+<div class="modal fade" id="attendanceHistoryModal" tabindex="-1" aria-labelledby="attendanceHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="attendanceHistoryModalLabel">Attendance History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="attendanceHistoryContent">
+                    <!-- Attendance history will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    $('#studentsTable').DataTable({
+        responsive: true,
+        autoWidth: false,
+        pageLength: 25,
+        order: [[1, 'asc']] // Sort by student name
+    });
+});
+
+function filterByCourse(courseName) {
+    const table = $('#studentsTable').DataTable();
+    
+    if (courseName === 'all') {
+        table.search('').draw();
+    } else {
+        table.column(2).search(courseName).draw();
+    }
+}
+
+function viewStudentDetails(studentId) {
+    // Find student data
+    const studentsData = [
+        {% for student_data in students_with_attendance %}
+        {
+            id: {{ student_data.student.id }},
+            name: "{{ student_data.student.user.get_full_name }}",
+            email: "{{ student_data.student.user.email }}",
+            course: "{{ student_data.student.course.name }}",
+            session: "{% if student_data.student.session_year %}{{ student_data.student.session_year.start_year }} - {{ student_data.student.session_year.end_year }}{% else %}Not assigned{% endif %}",
+            phone: "{{ student_data.student.phone_number|default:'N/A' }}",
+            address: "{{ student_data.student.address|default:'N/A' }}",
+            gender: "{{ student_data.student.gender }}",
+            attendance_percentage: {{ student_data.attendance_percentage }},
+            total_classes: {{ student_data.total_classes }},
+            present_classes: {{ student_data.present_classes }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const student = studentsData.find(s => s.id === studentId);
+    
+    if (student) {
+        const detailsHtml = `
+            <div class="row">
+                <div class="col-md-4 text-center">
+                    <img src="https://via.placeholder.com/150x150/1f2937/ffffff?text=${student.name.charAt(0)}" 
+                         class="img-circle img-fluid" alt="Student Photo">
+                    <h4 class="mt-2">${student.name}</h4>
+                    <p class="text-muted">${student.email}</p>
+                </div>
+                <div class="col-md-8">
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong>Course:</strong></td>
+                            <td>${student.course}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Session:</strong></td>
+                            <td>${student.session}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phone:</strong></td>
+                            <td>${student.phone}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Address:</strong></td>
+                            <td>${student.address}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Gender:</strong></td>
+                            <td>${student.gender}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Attendance:</strong></td>
+                            <td>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar ${student.attendance_percentage >= 75 ? 'bg-success' : student.attendance_percentage >= 50 ? 'bg-warning' : 'bg-danger'}" 
+                                         style="width: ${student.attendance_percentage}%">
+                                        ${student.attendance_percentage}%
+                                    </div>
+                                </div>
+                                <small class="text-muted">${student.present_classes}/${student.total_classes} classes attended</small>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('studentDetailsContent').innerHTML = detailsHtml;
+        $('#studentDetailsModal').modal('show');
+    }
+}
+
+function viewAttendanceHistory(studentId) {
+    // Show loading
+    document.getElementById('attendanceHistoryContent').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading attendance history...</p>
+        </div>
+    `;
+    
+    // Find student data
+    const studentsData = [
+        {% for student_data in students_with_attendance %}
+        {
+            id: {{ student_data.student.id }},
+            name: "{{ student_data.student.user.get_full_name }}",
+            course: "{{ student_data.student.course.name }}",
+            attendance_percentage: {{ student_data.attendance_percentage }},
+            total_classes: {{ student_data.total_classes }},
+            present_classes: {{ student_data.present_classes }}
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    const student = studentsData.find(s => s.id === studentId);
+    
+    if (student) {
+        // Simulate API call to get attendance history
+        // In real implementation, you would make an AJAX call to get detailed attendance records
+        setTimeout(() => {
+            const historyHtml = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h5>${student.name}</h5>
+                        <p class="text-muted">${student.course}</p>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar ${student.attendance_percentage >= 75 ? 'bg-success' : student.attendance_percentage >= 50 ? 'bg-warning' : 'bg-danger'}" 
+                                 style="width: ${student.attendance_percentage}%">
+                                ${student.attendance_percentage}%
+                            </div>
+                        </div>
+                        <small class="text-muted">${student.present_classes}/${student.total_classes} classes attended</small>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Note:</strong> This shows attendance records for subjects you teach to this student.
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Subject</th>
+                                <th>Status</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2024-01-15</td>
+                                <td>Mathematics</td>
+                                <td><span class="badge bg-success">Present</span></td>
+                                <td>On time</td>
+                            </tr>
+                            <tr>
+                                <td>2024-01-14</td>
+                                <td>Physics</td>
+                                <td><span class="badge bg-danger">Absent</span></td>
+                                <td>No reason provided</td>
+                            </tr>
+                            <tr>
+                                <td>2024-01-13</td>
+                                <td>Mathematics</td>
+                                <td><span class="badge bg-success">Present</span></td>
+                                <td>Participated actively</td>
+                            </tr>
+                            <tr>
+                                <td>2024-01-12</td>
+                                <td>Physics</td>
+                                <td><span class="badge bg-success">Present</span></td>
+                                <td>On time</td>
+                            </tr>
+                            <tr>
+                                <td>2024-01-11</td>
+                                <td>Mathematics</td>
+                                <td><span class="badge bg-warning">Late</span></td>
+                                <td>Arrived 10 minutes late</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-3">
+                    <button class="btn btn-primary" onclick="exportAttendanceHistory(${studentId})">
+                        <i class="fas fa-download"></i> Export History
+                    </button>
+                    <button class="btn btn-info" onclick="sendAttendanceReport(${studentId})">
+                        <i class="fas fa-envelope"></i> Send Report
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('attendanceHistoryContent').innerHTML = historyHtml;
+        }, 1000);
+    }
+    
+    $('#attendanceHistoryModal').modal('show');
+}
+
+function exportAttendanceHistory(studentId) {
+    // Implement export functionality
+    alert('Export functionality will be implemented in the next sprint.');
+}
+
+function sendAttendanceReport(studentId) {
+    // Implement send report functionality
+    alert('Send report functionality will be implemented in the next sprint.');
+}
+</script>
+{% endblock %}
+

@@ -9,6 +9,7 @@ from django.shortcuts import render, redirect
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from datetime import datetime, timedelta
 
 from .models import (
     User, Course, SessionYear, 
@@ -42,7 +43,7 @@ from .permissions import IsAdminUserType, IsStaffUserType, IsStaffOrAdmin
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Avg, Count, Q, F
+from django.db.models import Avg, Count, Q, F, Max, Min
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.decorators import api_view, permission_classes
@@ -911,6 +912,215 @@ def staff_list(request):
     staff_members = StaffProfile.objects.select_related('user').all()
     return render(request, 'staffs/staff_list.html', {'staff_members': staff_members})
 
+
+
+# Add these new views to your existing views.py file
+
+@login_required(login_url='login')
+def staff_subjects(request):
+    """Staff view to see their assigned subjects"""
+    if request.user.user_type != 2:
+        return redirect('dashboard')
+    
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+        assigned_subjects = Subject.objects.filter(staff=request.user).select_related('course')
+        
+        # Get students for each subject
+        subjects_with_students = []
+        for subject in assigned_subjects:
+            students = StudentProfile.objects.filter(course=subject.course).select_related('user')
+            subjects_with_students.append({
+                'subject': subject,
+                'students_count': students.count(),
+                'students': students
+            })
+        
+        context = {
+            'staff_profile': staff_profile,
+            'subjects_with_students': subjects_with_students,
+            'total_subjects': assigned_subjects.count(),
+            'total_students': sum([item['students_count'] for item in subjects_with_students])
+        }
+        
+        return render(request, 'staffs/staff_subjects.html', context)
+    except StaffProfile.DoesNotExist:
+        return redirect('dashboard')
+
+
+@login_required(login_url='login')
+def staff_students(request):
+    """Staff view to see students in their courses"""
+    if request.user.user_type != 2:
+        return redirect('dashboard')
+    
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+        assigned_subjects = Subject.objects.filter(staff=request.user)
+        course_ids = assigned_subjects.values_list('course_id', flat=True).distinct()
+        
+        # Get all students in courses where this staff teaches
+        students = StudentProfile.objects.filter(
+            course_id__in=course_ids
+        ).select_related('user', 'course', 'session_year')
+        
+        # Group students by course
+        students_by_course = {}
+        for student in students:
+            course_name = student.course.name if student.course else 'No Course'
+            if course_name not in students_by_course:
+                students_by_course[course_name] = []
+            students_by_course[course_name].append(student)
+        
+        # Get attendance summary for each student
+        students_with_attendance = []
+        for student in students:
+            # Get attendance reports for this student in subjects taught by this staff
+            reports = AttendanceReport.objects.filter(
+                student=student,
+                attendance__subject__staff=request.user
+            )
+            total_reports = reports.count()
+            present_reports = reports.filter(status=True).count()
+            attendance_percentage = round((present_reports / total_reports * 100), 2) if total_reports > 0 else 0
+            
+            students_with_attendance.append({
+                'student': student,
+                'total_classes': total_reports,
+                'present_classes': present_reports,
+                'attendance_percentage': attendance_percentage
+            })
+        
+        context = {
+            'staff_profile': staff_profile,
+            'students_by_course': students_by_course,
+            'students_with_attendance': students_with_attendance,
+            'total_students': students.count(),
+            'assigned_subjects': assigned_subjects
+        }
+        
+        return render(request, 'staffs/staff_students.html', context)
+    except StaffProfile.DoesNotExist:
+        return redirect('dashboard')
+
+
+@login_required(login_url='login')
+def staff_attendance_summary(request):
+    """Staff attendance summary and analytics"""
+    if request.user.user_type != 2:
+        return redirect('dashboard')
+    
+    try:
+        staff_profile = StaffProfile.objects.get(user=request.user)
+        assigned_subjects = Subject.objects.filter(staff=request.user)
+        
+        # Get all attendance records for this staff's subjects
+        attendance_records = Attendance.objects.filter(
+            subject__staff=request.user
+        ).select_related('subject').order_by('-date')
+        
+        # Calculate summary statistics
+        total_classes = attendance_records.count()
+        
+        # Get all attendance reports for this staff's subjects
+        all_reports = AttendanceReport.objects.filter(
+            attendance__subject__staff=request.user
+        )
+        total_student_records = all_reports.count()
+        present_records = all_reports.filter(status=True).count()
+        overall_attendance_percentage = round((present_records / total_student_records * 100), 2) if total_student_records > 0 else 0
+        
+        # Subject-wise attendance summary
+        subject_summaries = []
+        for subject in assigned_subjects:
+            subject_reports = AttendanceReport.objects.filter(
+                attendance__subject=subject
+            )
+            subject_total = subject_reports.count()
+            subject_present = subject_reports.filter(status=True).count()
+            subject_percentage = round((subject_present / subject_total * 100), 2) if subject_total > 0 else 0
+            
+            subject_summaries.append({
+                'subject': subject,
+                'total_records': subject_total,
+                'present_records': subject_present,
+                'attendance_percentage': subject_percentage,
+                'classes_taken': Attendance.objects.filter(subject=subject).count()
+            })
+        
+        # Recent attendance activities
+        recent_activities = attendance_records[:10]
+        
+        context = {
+            'staff_profile': staff_profile,
+            'total_classes': total_classes,
+            'total_student_records': total_student_records,
+            'present_records': present_records,
+            'overall_attendance_percentage': overall_attendance_percentage,
+            'subject_summaries': subject_summaries,
+            'recent_activities': recent_activities,
+            'assigned_subjects_count': assigned_subjects.count()
+        }
+        
+        return render(request, 'staffs/staff_attendance_summary.html', context)
+    except StaffProfile.DoesNotExist:
+        return redirect('dashboard')
+
+
+# API endpoint for staff dashboard data
+class StaffDashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsStaffUserType]
+    
+    def get(self, request):
+        try:
+            staff_profile = StaffProfile.objects.get(user=request.user)
+            assigned_subjects = Subject.objects.filter(staff=request.user)
+            
+            # Get students in staff's courses
+            course_ids = assigned_subjects.values_list('course_id', flat=True).distinct()
+            students_count = StudentProfile.objects.filter(course_id__in=course_ids).count()
+            
+            # Get attendance summary
+            all_reports = AttendanceReport.objects.filter(
+                attendance__subject__staff=request.user
+            )
+            total_records = all_reports.count()
+            present_records = all_reports.filter(status=True).count()
+            attendance_percentage = round((present_records / total_records * 100), 2) if total_records > 0 else 0
+            
+            # Get recent activities
+            recent_attendance = Attendance.objects.filter(
+                subject__staff=request.user
+            ).order_by('-date')[:5]
+            
+            data = {
+                'assigned_subjects_count': assigned_subjects.count(),
+                'students_count': students_count,
+                'total_attendance_records': total_records,
+                'attendance_percentage': attendance_percentage,
+                'recent_activities': [
+                    {
+                        'subject': att.subject.name,
+                        'date': att.date,
+                        'students_count': att.reports.count()
+                    } for att in recent_attendance
+                ],
+                'subjects': [
+                    {
+                        'id': subj.id,
+                        'name': subj.name,
+                        'course': subj.course.name,
+                        'students_count': StudentProfile.objects.filter(course=subj.course).count()
+                    } for subj in assigned_subjects
+                ]
+            }
+            
+            return Response(data)
+        except StaffProfile.DoesNotExist:
+            return Response({'error': 'Staff profile not found'}, status=404)
+
+
+
 @login_required(login_url='login')
 def courses_list(request):
     courses = Course.objects.all()
@@ -953,4 +1163,321 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@login_required(login_url='login')
+def student_progress_view(request):
+    """Student progress tracking view"""
+    user = request.user
+    
+    # Only students can access their progress
+    if user.user_type != 3:
+        return redirect('dashboard')
+    
+    try:
+        student_profile = StudentProfile.objects.get(user=user)
+        
+        # Get student's subjects
+        subjects = Subject.objects.filter(course=student_profile.course)
+        
+        # Calculate overall statistics
+        results = StudentResult.objects.filter(student=student_profile)
+        attendance_reports = AttendanceReport.objects.filter(student=student_profile)
+        
+        # Calculate GPA and averages
+        if results.exists():
+            avg_test_score = results.aggregate(avg=Avg('test_score'))['avg'] or 0
+            avg_exam_score = results.aggregate(avg=Avg('exam_score'))['avg'] or 0
+            overall_average = (avg_test_score + avg_exam_score) / 2
+            gpa = calculate_gpa(overall_average)
+        else:
+            avg_test_score = avg_exam_score = overall_average = gpa = 0
+        
+        # Calculate attendance percentage
+        total_attendance = attendance_reports.count()
+        present_count = attendance_reports.filter(status=True).count()
+        attendance_percentage = (present_count / total_attendance * 100) if total_attendance > 0 else 0
+        
+        # Get recent activities (last 10 results and attendance)
+        recent_results = results.order_by('-created_at')[:5]
+        recent_attendance = attendance_reports.order_by('-attendance__date')[:5]
+        
+        # Subject-wise performance
+        subject_performance = []
+        for subject in subjects:
+            subject_results = results.filter(subject=subject)
+            subject_attendance = attendance_reports.filter(attendance__subject=subject)
+            
+            if subject_results.exists():
+                subj_avg = (subject_results.aggregate(
+                    avg_test=Avg('test_score'),
+                    avg_exam=Avg('exam_score')
+                ))
+                subj_average = ((subj_avg['avg_test'] or 0) + (subj_avg['avg_exam'] or 0)) / 2
+            else:
+                subj_average = 0
+            
+            subj_attendance_pct = 0
+            if subject_attendance.exists():
+                subj_present = subject_attendance.filter(status=True).count()
+                subj_total = subject_attendance.count()
+                subj_attendance_pct = (subj_present / subj_total * 100) if subj_total > 0 else 0
+            
+            subject_performance.append({
+                'subject': subject,
+                'average_score': round(subj_average, 1),
+                'attendance_percentage': round(subj_attendance_pct, 1),
+                'grade': calculate_letter_grade(subj_average),
+                'status': get_performance_status(subj_average, subj_attendance_pct)
+            })
+        
+        context = {
+            'student_profile': student_profile,
+            'subjects': subjects,
+            'overall_gpa': round(gpa, 2),
+            'overall_average': round(overall_average, 1),
+            'attendance_percentage': round(attendance_percentage, 1),
+            'total_subjects': subjects.count(),
+            'completed_assessments': results.count(),
+            'recent_results': recent_results,
+            'recent_attendance': recent_attendance,
+            'subject_performance': subject_performance,
+            'improvement_areas': get_improvement_areas(subject_performance),
+            'strengths': get_student_strengths(subject_performance),
+        }
+        
+        return render(request, 'students/student_progress.html', context)
+        
+    except StudentProfile.DoesNotExist:
+        return render(request, 'students/student_progress.html', {
+            'error': 'Student profile not found'
+        })
+
+@login_required(login_url='login')
+def student_results_view(request):
+    """Student results viewing system"""
+    user = request.user
+    
+    # Only students can access their results
+    if user.user_type != 3:
+        return redirect('dashboard')
+    
+    try:
+        student_profile = StudentProfile.objects.get(user=user)
+        
+        # Get student's subjects and results
+        subjects = Subject.objects.filter(course=student_profile.course)
+        results = StudentResult.objects.filter(student=student_profile).select_related('subject')
+        
+        # Calculate summary statistics
+        if results.exists():
+            # Overall statistics
+            avg_test = results.aggregate(avg=Avg('test_score'))['avg'] or 0
+            avg_exam = results.aggregate(avg=Avg('exam_score'))['avg'] or 0
+            overall_avg = (avg_test + avg_exam) / 2
+            
+            # Highest scores
+            highest_test = results.aggregate(max=Max('test_score'))['max'] or 0
+            highest_exam = results.aggregate(max=Max('exam_score'))['max'] or 0
+            highest_overall = max(highest_test, highest_exam)
+            
+            # GPA calculation
+            gpa = calculate_gpa(overall_avg)
+            
+            # Grade distribution
+            grade_distribution = calculate_grade_distribution(results)
+            
+        else:
+            overall_avg = highest_overall = gpa = 0
+            grade_distribution = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+        
+        # Subject-wise performance summary
+        subject_summary = []
+        for subject in subjects:
+            subject_results = results.filter(subject=subject)
+            if subject_results.exists():
+                subj_avg_test = subject_results.aggregate(avg=Avg('test_score'))['avg'] or 0
+                subj_avg_exam = subject_results.aggregate(avg=Avg('exam_score'))['avg'] or 0
+                subj_overall = (subj_avg_test + subj_avg_exam) / 2
+                
+                subject_summary.append({
+                    'subject': subject,
+                    'average_score': round(subj_overall, 1),
+                    'test_average': round(subj_avg_test, 1),
+                    'exam_average': round(subj_avg_exam, 1),
+                    'grade': calculate_letter_grade(subj_overall),
+                    'total_assessments': subject_results.count(),
+                    'trend': calculate_trend(subject_results)
+                })
+        
+        context = {
+            'student_profile': student_profile,
+            'subjects': subjects,
+            'results': results.order_by('-created_at'),
+            'overall_average': round(overall_avg, 1),
+            'current_gpa': round(gpa, 2),
+            'highest_score': round(highest_overall, 1),
+            'highest_grade': calculate_letter_grade(highest_overall),
+            'total_assessments': results.count(),
+            'grade_distribution': grade_distribution,
+            'subject_summary': subject_summary,
+            'performance_trend': calculate_performance_trend(results),
+        }
+        
+        return render(request, 'students/student_results.html', context)
+        
+    except StudentProfile.DoesNotExist:
+        return render(request, 'students/student_results.html', {
+            'error': 'Student profile not found'
+        })
+
+# Helper functions
+def calculate_gpa(average_score):
+    """Convert average score to GPA (4.0 scale)"""
+    if average_score >= 97: return 4.0
+    elif average_score >= 93: return 3.7
+    elif average_score >= 90: return 3.3
+    elif average_score >= 87: return 3.0
+    elif average_score >= 83: return 2.7
+    elif average_score >= 80: return 2.3
+    elif average_score >= 77: return 2.0
+    elif average_score >= 73: return 1.7
+    elif average_score >= 70: return 1.3
+    elif average_score >= 67: return 1.0
+    elif average_score >= 65: return 0.7
+    else: return 0.0
+
+def calculate_letter_grade(score):
+    """Convert numeric score to letter grade"""
+    if score >= 97: return 'A+'
+    elif score >= 93: return 'A'
+    elif score >= 90: return 'A-'
+    elif score >= 87: return 'B+'
+    elif score >= 83: return 'B'
+    elif score >= 80: return 'B-'
+    elif score >= 77: return 'C+'
+    elif score >= 73: return 'C'
+    elif score >= 70: return 'C-'
+    elif score >= 67: return 'D+'
+    elif score >= 65: return 'D'
+    else: return 'F'
+
+def calculate_grade_distribution(results):
+    """Calculate distribution of grades"""
+    distribution = {'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+    
+    for result in results:
+        avg_score = (result.test_score + result.exam_score) / 2
+        grade = calculate_letter_grade(avg_score)
+        
+        if grade.startswith('A'):
+            distribution['A'] += 1
+        elif grade.startswith('B'):
+            distribution['B'] += 1
+        elif grade.startswith('C'):
+            distribution['C'] += 1
+        elif grade.startswith('D'):
+            distribution['D'] += 1
+        else:
+            distribution['F'] += 1
+    
+    # Convert to percentages
+    total = sum(distribution.values())
+    if total > 0:
+        for grade in distribution:
+            distribution[grade] = round((distribution[grade] / total) * 100, 1)
+    
+    return distribution
+
+def get_performance_status(average_score, attendance_percentage):
+    """Determine performance status based on score and attendance"""
+    if average_score >= 85 and attendance_percentage >= 90:
+        return 'excellent'
+    elif average_score >= 75 and attendance_percentage >= 80:
+        return 'good'
+    elif average_score >= 65 and attendance_percentage >= 70:
+        return 'average'
+    else:
+        return 'needs_improvement'
+
+def get_improvement_areas(subject_performance):
+    """Identify areas that need improvement"""
+    areas = []
+    for perf in subject_performance:
+        if perf['average_score'] < 70 or perf['attendance_percentage'] < 75:
+            areas.append({
+                'subject': perf['subject'].name,
+                'issue': 'Low performance' if perf['average_score'] < 70 else 'Poor attendance',
+                'score': perf['average_score'],
+                'attendance': perf['attendance_percentage']
+            })
+    return areas
+
+def get_student_strengths(subject_performance):
+    """Identify student's academic strengths"""
+    strengths = []
+    for perf in subject_performance:
+        if perf['average_score'] >= 85 and perf['attendance_percentage'] >= 90:
+            strengths.append({
+                'subject': perf['subject'].name,
+                'score': perf['average_score'],
+                'grade': perf['grade']
+            })
+    return strengths
+
+def calculate_trend(subject_results):
+    """Calculate performance trend for a subject"""
+    if subject_results.count() < 2:
+        return 'stable'
+    
+    recent_results = subject_results.order_by('-created_at')[:3]
+    older_results = subject_results.order_by('-created_at')[3:6]
+    
+    if recent_results.exists() and older_results.exists():
+        recent_avg = sum([(r.test_score + r.exam_score) / 2 for r in recent_results]) / recent_results.count()
+        older_avg = sum([(r.test_score + r.exam_score) / 2 for r in older_results]) / older_results.count()
+        
+        if recent_avg > older_avg + 5:
+            return 'improving'
+        elif recent_avg < older_avg - 5:
+            return 'declining'
+    
+    return 'stable'
+
+def calculate_performance_trend(results):
+    """Calculate overall performance trend over time"""
+    if results.count() < 4:
+        return []
+    
+    # Group results by month
+    monthly_data = {}
+    for result in results:
+        month_key = result.created_at.strftime('%Y-%m')
+        if month_key not in monthly_data:
+            monthly_data[month_key] = []
+        monthly_data[month_key].append((result.test_score + result.exam_score) / 2)
+    
+    # Calculate monthly averages
+    trend_data = []
+    for month, scores in sorted(monthly_data.items()):
+        avg_score = sum(scores) / len(scores)
+        trend_data.append({
+            'month': month,
+            'average': round(avg_score, 1)
+        })
+    
+    return trend_data[-8:]  # Last 8 months
 
